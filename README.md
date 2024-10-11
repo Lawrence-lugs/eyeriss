@@ -7,3 +7,4 @@ Has a PE modelled after eyeriss
 * PE saturation logic
 * Cluster level
 * Router & Buffer logic
+* Signed multiplication :D

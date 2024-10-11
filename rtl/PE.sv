@@ -124,13 +124,10 @@ enum logic [2:0] {
 } state;
 
 /*
-Compute state position counters
-4-bit, handling a max filter size of 16x16
-16-bit, handling a max ifmap/ofmap size of 65536x65536
+Output position counter
 */
-logic [3:0] wpos;
+
 logic [15:0] opos;
-logic [15:0] pspos;
 
 always_ff @( posedge clk or negedge nrst ) begin : peFSM
     if (!nrst) begin
@@ -144,11 +141,9 @@ always_ff @( posedge clk or negedge nrst ) begin : peFSM
         a_spad_addr <= 0;
         s_spad_addr <= -1;
         w_spad_wr_data <= 0;
+        opos <= 0;
         a_spad_wr_data <= 0;
         s_spad_wr_data <= 0;
-        opos <= 0;
-        wpos <= 0;
-        pspos <= 0;
         flag_done <= 0;
         flag_psum_valid <= 0;
         psum_o <= 0;
@@ -174,8 +169,6 @@ always_ff @( posedge clk or negedge nrst ) begin : peFSM
                             // Start compute
                             // In idle, w_addr and a_addr = 0
                             state <= COMPUTE;
-                            wpos <= 0;
-                            opos <= 0;
                             w_reg <= w_spad_rd_data;
                             a_reg <= a_spad_rd_data;
                             ps_reg <= 0;
@@ -189,12 +182,10 @@ always_ff @( posedge clk or negedge nrst ) begin : peFSM
                                 // Add own psum and pass up
                                 psum_o <= s_spad_rd_data + psum_i;
                                 flag_psum_valid <= 1;
-                                if (pspos == ctrl_acount + 1 - ctrl_wcount) begin
+                                if (s_spad_addr == ctrl_acount + 1 - ctrl_wcount) begin
                                     s_spad_addr <= 0;
-                                    pspos <= 0;    
                                 end else begin
                                     s_spad_addr <= s_spad_addr + 1; // increment spad target
-                                    pspos <= pspos + 1;
                                 end
                             end else begin
                                 state <= IDLE;
@@ -239,7 +230,6 @@ always_ff @( posedge clk or negedge nrst ) begin : peFSM
                     s_spad_wr_en <= 0;
                 end
                 if (w_spad_addr == ctrl_wcount - 1) begin // PSum is done
-                    wpos <= 0;
 
                     w_spad_addr <= 0;
                     a_spad_addr <= opos + 1;
@@ -255,7 +245,6 @@ always_ff @( posedge clk or negedge nrst ) begin : peFSM
                         opos <= opos + 1;
                     end
                 end else begin // PSum is computing
-                    wpos <= wpos + 1;
                     
                     w_spad_addr <= w_spad_addr + 1;
                     a_spad_addr <= a_spad_addr + 1;

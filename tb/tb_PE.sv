@@ -12,12 +12,14 @@ localparam int interfaceSize = 64;
 localparam int dataSize = 8;
 localparam int wSpadNReg = 16;
 localparam int aSpadNReg = 16;
+localparam multResSize = dataSize*2;
+localparam macResSize = multResSize + 4;
 
 // Signals
 logic [dataSize-1:0] weights_i;
 logic [dataSize-1:0] acts_i;
-logic [dataSize-1:0] psum_i;
-logic [dataSize-1:0] psum_o;
+logic [macResSize-1:0] psum_i;
+logic [macResSize-1:0] psum_o;
 logic ctrl_loadw;
 logic ctrl_loada;
 logic [7:0] ctrl_acount;
@@ -54,6 +56,9 @@ always
 int a_f,o_f,w_f;
 int i;
 int cc_count;
+int err_cnt;
+
+logic [macResSize-1:0] ref_o;
 
 initial begin
     $vcdplusfile("out.vpd");
@@ -75,6 +80,7 @@ initial begin
     ctrl_wcount = 3;
     ctrl_start = 0;
     ctrl_sums = 0;
+    err_cnt = 0;
 
     #(CLK_PERIOD*5)
     nrst = 1;
@@ -120,10 +126,20 @@ initial begin
 
     // When to stop the partial sum systolics is decided by the future cluster control.
     for (i = 0; i < ctrl_acount + 1 - ctrl_wcount ; i = i + 1 ) begin
+        $fscanf(o_f,"%d ", ref_o);
         #(CLK_PERIOD);
+        if(ref_o != psum_o) begin
+            $display("Error at output (line %d),%d vs expected %d",i,psum_o,ref_o);
+            err_cnt++;
+        end
     end
     ctrl_sums = 0;
     #(CLK_PERIOD*10);
+
+    if(err_cnt)
+        $display("%d errors were detected.",err_cnt);
+    else
+        $display("Simulation success. No errors were detected.");
 
     $display("done.");
     $display("======");
