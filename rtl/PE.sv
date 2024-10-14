@@ -16,9 +16,9 @@ module PE
     The original eyeriss uses a different interface dataSize 
     that would be a hassle to handle for the spads.
     */
-    input [dataSize-1:0] weights_i,
-    input [dataSize-1:0] acts_i, 
-    input [macResSize-1:0] psum_i, 
+    input signed [dataSize-1:0] weights_i,
+    input signed [dataSize-1:0] acts_i, 
+    input signed [macResSize-1:0] psum_i, 
 
     output logic [macResSize-1:0] psum_o,
     output logic flag_psum_valid,
@@ -43,12 +43,12 @@ The PE must be able to handle a 1D convolution on its own using the scratchpads.
 
 /* Activation Preregisters */
 
-logic [dataSize-1:0] a_reg;
-logic [dataSize-1:0] w_reg;
+logic signed [dataSize-1:0] a_reg;
+logic signed [dataSize-1:0] w_reg;
 
-logic [macResSize-1:0] mac_res; // Bit growth -> + $clog(maxKernelSize), use 4 for now
-logic [multResSize-1:0] mult_res;
-logic [multResSize-1:0] ps_reg;
+logic signed [macResSize-1:0] mac_res; // Bit growth -> + $clog(maxKernelSize), use 4 for now
+logic signed [multResSize-1:0] mult_res;
+logic signed [multResSize-1:0] ps_reg;
 
 /* Spads instantiation */
 
