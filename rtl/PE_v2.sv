@@ -166,20 +166,17 @@ always_ff @( posedge clk or negedge nrst ) begin : peFSM
                     a_spad_addr <= a_spad_addr + 1;
                 end else begin
                     if (ctrl_sums) begin 
-                        // IDLE can also handle systolic summation of psums
-                        // PE output flag_psum_valid goes into the next PE's ctrl_sums for systolic operation
-                        // Bottom PE's ctrl_sums is controlled by the cluster control.
-                        // Add own psum and pass to next.
+                        // Systolic summing
                         psum_o <= s_spad_rd_data + psum_i;
                         s_spad_wr_data <= s_spad_rd_data + psum_i;
                         s_spad_wr_en <= 1;
                         flag_psum_valid <= 1;
-                        if (s_spad_addr == ctrl_acount + 1 - ctrl_wcount) begin
-                            s_spad_addr <= 0;
+                        if (s_spad_addr == ctrl_acount - ctrl_wcount) begin
                             flag_done <= 1;
+                            s_spad_addr <= -1;
                         end else begin
-                            s_spad_addr <= s_spad_addr + 1;
                             flag_done <= 0;
+                            s_spad_addr <= s_spad_addr + 1;
                         end
                     end else begin
                         s_spad_wr_en <= 0;

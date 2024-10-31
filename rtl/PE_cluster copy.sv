@@ -21,9 +21,9 @@ module PE_cluster
     input clk,
     input nrst,
 
-    output logic [numPeX-1:0][macResSize-1:0] outs_write_data_o,
-    output logic [addrSize-1:0] outs_write_addr_o,
-    output logic outs_valid,
+    output logic [numPeX-1:0][macResSize-1:0]   outs_write_data_o,
+    output logic [numPeX-1:0][addrSize-1:0]     outs_write_addr_o,
+    output logic [numPeX-1:0]                   outs_valid,
 
     // Data in
     input signed [dataSize-1:0] w_data_i,
@@ -183,8 +183,7 @@ endgenerate
 
 typedef enum logic [1:0] {
     S_IDLE,
-    S_COMPUTE,
-    S_PARTIALSUMS
+    S_COMPUTE
 } cluster_state_t;
 
 cluster_state_t state_q;
@@ -210,36 +209,8 @@ always_comb begin : mainFSM_d
                 state_d = S_PARTIALSUMS;
             end
         end 
-        S_PARTIALSUMS : begin
-            if (pe_done_o[0][numPeY-1] == 1) begin //if the topmost PE is done, we done.
-                state_d = S_IDLE;
-            end
-        end
         default: ;
     endcase
-end
-
-// Trigger sums
-logic [4:0] trigger_ctr;
-always_ff @( posedge clk or negedge nrst ) begin : triggerSumCtr
-    if (!nrst) begin
-        pe_trigger_sums <= 0;
-        trigger_ctr <= 0;
-    end else begin
-        for (int i = 0; i < numPeX; i = i + 1) begin
-            if (state_d == S_PARTIALSUMS) begin
-                if (trigger_ctr != ctrl_acount - ctrl_wcount + 1) begin
-                    trigger_ctr <= trigger_ctr + 1;
-                    pe_trigger_sums <= {numPeX{1'b1}};
-                end else begin
-                    pe_trigger_sums <= 0;
-                end
-            end else begin
-                pe_trigger_sums <= 0;
-                trigger_ctr <= 0;
-            end
-        end
-    end
 end
 
 // Outputs : All the top PE outputs

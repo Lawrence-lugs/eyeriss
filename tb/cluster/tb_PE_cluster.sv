@@ -26,7 +26,7 @@ localparam oBufferDepth = 2**16;
 integer a_file, w_file, o_file, act_id_file, weight_id_file;
 integer acts_tag_order_file, weights_tag_order_file;
 integer scan_file;
-logic signed [dataSize-1:0] expected_output;
+logic signed [macResSize-1:0] expected_output;
 integer error_count;
 integer output_count;
 integer output_element;
@@ -98,9 +98,9 @@ PE_cluster #(
 localparam wMemSize = 1024;
 localparam aMemSize = 1024;
 // localparam oMemSize = 10;
-logic [wMemSize-1:0][dataSize-1:0]                w_mem;
-logic [aMemSize-1:0][dataSize-1:0]                a_mem;
-logic [numPeX-1:0][numPeY-1:0][macResSize-1:0]    o_mem;
+logic signed [wMemSize-1:0][dataSize-1:0]                w_mem;
+logic signed [aMemSize-1:0][dataSize-1:0]                a_mem;
+logic signed [numPeX-1:0][numPeY-1:0][macResSize-1:0]    o_mem;
 
 always @(posedge clk or negedge nrst) begin : registeredOmem
     if (!nrst) begin
@@ -162,6 +162,7 @@ initial begin
     cluster_enable_i = 1;
     
     // 1.1 Scan in multicast IDs
+    // Careful: Make sure the id files do not have extra spaces
     $display("Scanning in multicast IDs for acts...");
     $write("ActID scan in order: ");
     while(!$feof(act_id_file)) begin
@@ -237,8 +238,8 @@ initial begin
     for (int i = 0; i < outputDimensionY; i = i+1) begin
         for (int j = 0; j < outputDimensionX; j = j+1) begin
             scan_file = $fscanf(o_file, "%d", expected_output);
-            $write("RTL %d -- %d Python", o_mem[i][j], expected_output);
-            if (o_mem[i][j] != expected_output) begin 
+            $write("RTL %d -- %d Python", $signed(o_mem[j][i]), expected_output);
+            if (o_mem[j][i] != expected_output) begin 
                 $write("!!!\n");
                 error_count = error_count + 1;
             end else begin
