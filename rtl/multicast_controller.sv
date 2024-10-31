@@ -19,8 +19,8 @@ module multicast_controller #(
     input [dataSize-1:0] cast_data_i,
 
     // Talk to PE
-    output [dataSize-1:0] cast_data_o,
-    output load
+    output logic [dataSize-1:0] cast_data_o,
+    output logic load
 );
 
 logic [idBits-1:0] id;
@@ -30,8 +30,13 @@ always_ff @( posedge clk or negedge nrst ) begin : idConfig
         id <= 0;
     end else begin
         if (ctrl_id_write) begin
-            id <= id_wr_data;
+            id <= id_wr_data_i;
+            $display("MCC %s: Loaded ID %d",
+                $sformatf("%m"),
+                id_wr_data_i
+            );
         end
+    end
 end
 
 always_comb begin : amItarget

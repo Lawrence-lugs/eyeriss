@@ -21,174 +21,168 @@ module PE_cluster
     input clk,
     input nrst,
 
-    // Memory Interfaces
-    input signed [dataSize-1:0] w_read_data_i,
-    input signed [addrSize-1:0] w_read_addr_o,
-    input signed [dataSize-1:0] a_read_data_i,
-    input signed [addrSize-1:0] a_read_addr_o,
-    output logic [numPeX-1:0][dataSize-1:0] outs_write_data_o,
-    output logic [numPeX-1:0][dataSize-1:0] outs_write_addr_o,
+    output logic [numPeX-1:0][macResSize-1:0] outs_write_data_o,
+    output logic [addrSize-1:0] outs_write_addr_o,
     output logic outs_valid,
+
+    // Data in
+    input signed [dataSize-1:0] w_data_i,
+    input signed [dataSize-1:0] a_data_i,
+    input        [idSize-1:0]   act_mcn_tag_target_x,
+    input        [idSize-1:0]   weight_mcn_tag_target_x,
+    input        [idSize-1:0]   act_mcn_tag_target_y,
+    input        [idSize-1:0]   weight_mcn_tag_target_y,
 
     // Scan inputs
     input [idSize-1:0] act_id_scan_i,
     input [idSize-1:0] weight_id_scan_i,
+    input act_id_wren_i,
+    input weight_id_wren_i,
 
     // Trigger inputs
-    input start_compute_i,
-    input mc_controller_id_wren_i,
     input cluster_enable_i,
+    input start_compute_i,
 
     // Config
     input [7:0] ctrl_acount,
-    input [7:0] ctrl_wcount,
-    
+    input [7:0] ctrl_wcount,    
     // Flags
     output logic flag_done
 );
 
-// Cluster logic
+localparam numRegMulticastNetwork = numPeY*numPeX+numPeY; // one per multicast network, one per pe, one per pe row
 
-// PE inputs and outputs
+// PE ARRAY NETS
 logic [numPeX-1:0][numPeY-1:0][dataSize-1:0]    pe_weights_i;
 logic [numPeX-1:0][numPeY-1:0][dataSize-1:0]    pe_acts_i;
 logic [numPeX-1:0][numPeY:0][macResSize-1:0]    pe_psum_o;
-logic [numPeX-1:0][numPeY:0]                    pe_done_o;
-logic [numPeX-1:0][numPeY-1:0]                  pe_flag_psum_valid;
+logic [numPeX-1:0][numPeY-1:0]                  pe_done_o;
+logic [numPeX-1:0][numPeY:0]                    pe_flag_psum_valid;
 logic [numPeX-1:0][numPeY-1:0]                  pe_w_load_en;
 logic [numPeX-1:0][numPeY-1:0]                  pe_a_load_en;
 logic [numPeX-1:0]                              pe_trigger_sums;
 
-// multicast networks id scan chain
-logic [numPeX*numPeY+numPeY:0][idSize-1:0] weight_mcn_id_scan_chain;
-logic [numPeX*numPeY+numPeY:0][idSize-1:0] acts_mcn_id_scan_chain;
+// ID SCAN CHAIN NETS
+logic [numPeX*numPeY+numPeY-1:0][idSize-1:0] weight_mcn_id_scan_chain;
+logic [numPeX*numPeY+numPeY-1:0][idSize-1:0] acts_mcn_id_scan_chain;
 
-// multicast networks tag/id
-logic [idSize-1:0] act_mcn_tag_target_x;
-logic [idSize-1:0] weight_mcn_tag_target_x;
-logic [idSize-1:0] act_mcn_tag_target_y;
-logic [idSize-1:0] weight_mcn_tag_target_y;
-
+// MULTICAST NETWORK NETS
 logic [numPeY-1:0][dataSize-1:0] weight_data_x_bus;
 logic [dataSize-1:0] weight_data; 
 
 logic [numPeY-1:0][dataSize-1:0] acts_data_x_bus;
 logic [dataSize-1:0] acts_data; 
 
-// For loading phase
-logic done_load;
-
+// PE Array and X-bus multicast controllers
 genvar x;
 genvar y;
-
-// PE Array and X-bus multicast controllers
 generate
-    for (x = 0; x < numPeX; x = x+1) begin
-        for (y = 0; y < numPeY; y = y+1) begin
+    for (x = 0; x < numPeX; x = x+1) begin : PeArrayX
+        for (y = 0; y < numPeY; y = y+1) begin : PeArrayY
             PE #(
-                .interfaceSize(interfaceSize),
-                .dataSize(dataSize),
-                .wSpadNReg(wSpadNReg),
-                .aSpadNReg(aSpadNReg)
+                .interfaceSize  (interfaceSize),
+                .dataSize       (dataSize),
+                .wSpadNReg      (wSpadNReg),
+                .aSpadNReg      (aSpadNReg)
             ) u_pe (
-                .clk(clk),
-                .nrst(nrst),
+                .clk            (clk),
+                .nrst           (nrst),
 
-                .weights_i(pe_weights_i[x][y]),
-                .acts_i(pe_acts_i[x][y]),
+                .weights_i      (pe_weights_i[x][y]),
+                .acts_i         (pe_acts_i[x][y]),
                 
-                .psum_o(pe_psum_o[x][y+1]),
-                .psum_i(pe_psum_o[x][y]),
+                .psum_o         (pe_psum_o[x][y+1]),
+                .psum_i         (pe_psum_o[x][y]),
 
-                .ctrl_loadw(pe_w_load_en[x][y]),
-                .ctrl_loada(pe_a_load_en[x][y]),
+                .ctrl_loadw     (pe_w_load_en[x][y]),
+                .ctrl_loada     (pe_a_load_en[x][y]),
                 
-                .ctrl_acount(ctrl_acount),
-                .ctrl_wcount(ctrl_wcount),
+                .ctrl_acount    (ctrl_acount),
+                .ctrl_wcount    (ctrl_wcount),
                 
-                .ctrl_start(start_compute_i),
+                .ctrl_start     (start_compute_i),
                 
                 .flag_psum_valid(pe_flag_psum_valid[x][y+1]),
-                .ctrl_sums(pe_flag_psum_valid[x][y]),
+                .ctrl_sums      (pe_flag_psum_valid[x][y]),
 
-                .flag_done(pe_done_o[x][y])
+                .flag_done      (pe_done_o[x][y])
             );
 
             multicast_controller #(
-                .idBits(idBits),
-                .dataSize(dataSize)
+                .idBits         (idSize),
+                .dataSize       (dataSize)
             ) u_weight_multicast_controller_x (
-                .clk(clk),
-                .nrst(nrst),
-                .ctrl_id_write(mc_controller_id_wren_i),
-                .ctrl_enable(cluster_enable_i),
-                .id_wr_data_i(weight_mcn_id_scan_chain[y*numPeX+x]),
-                .cast_tag_i(weight_mcn_tag_target_x),
-                .cast_data_i(weight_data_x_bus[y]),
-                .cast_data_o(pe_weights_i[x][y]),
-                .load(pe_w_load_en[x][y])
+                .clk            (clk),
+                .nrst           (nrst),
+                .ctrl_id_write  (weight_id_wren_i),
+                .ctrl_enable    (cluster_enable_i),
+                .id_wr_data_i   (weight_mcn_id_scan_chain[y*numPeX+x]),
+                .cast_tag_i     (weight_mcn_tag_target_x),
+                .cast_data_i    (weight_data_x_bus[y]),
+                .cast_data_o    (pe_weights_i[x][y]),
+                .load           (pe_w_load_en[x][y])
             );
 
             multicast_controller #(
-                .idBits(idBits),
-                .dataSize(dataSize)
+                .idBits         (idSize),
+                .dataSize       (dataSize)
             ) u_acts_multicast_controller_x (
-                .clk(clk),
-                .nrst(nrst),
-                .ctrl_id_write(mc_controller_id_wren_i),
-                .ctrl_enable(cluster_enable_i),
-                .id_wr_data_i(acts_mcn_id_scan_chain[y*numPeX+x]),
-                .cast_tag_i(act_mcn_tag_target_x),
-                .cast_data_i(acts_data_x_bus[y]),
-                .cast_data_o(pe_acts_i[x][y]),
-                .load(pe_a_load_en[x][y])
+                .clk            (clk),
+                .nrst           (nrst),
+                .ctrl_id_write  (act_id_wren_i),
+                .ctrl_enable    (cluster_enable_i),
+                .id_wr_data_i   (acts_mcn_id_scan_chain[y*numPeX+x]),
+                .cast_tag_i     (act_mcn_tag_target_x),
+                .cast_data_i    (acts_data_x_bus[y]),
+                .cast_data_o    (pe_acts_i[x][y]),
+                .load           (pe_a_load_en[x][y])
             );
-             
         end
 
-        pe_flag_psum_valid[x][0] = pe_trigger_sums[x];
+        assign pe_flag_psum_valid[x][0] = pe_trigger_sums[x];
+        assign pe_psum_o[x][0] = 0;
 
     end
 endgenerate
 
 // y-bus multicast controllers
 generate
-    for (y = 0; y < numPeY ; y = y + 1) begin
+    for (y = 0; y < numPeY ; y = y + 1) begin : YBusMulticast
         multicast_controller #(
-            .idBits(idBits),
-            .dataSize(dataSize)
+            .idBits         (idSize),
+            .dataSize       (dataSize)
         ) u_acts_multicast_controller_y (
-            .clk(clk),
-            .nrst(nrst),
-            .ctrl_id_write(mc_controller_id_wren_i),
-            .ctrl_enable(cluster_enable_i),
-            .id_wr_data_i(acts_mcn_id_scan_chain[numPeY*numPeX+y]),
-            .cast_tag_i(act_mcn_tag_target_y),
-            .cast_data_i(a_read_data_i),
-            .cast_data_o(acts_data_x_bus[y])
+            .clk            (clk),
+            .nrst           (nrst),
+            .ctrl_id_write  (act_id_wren_i),
+            .ctrl_enable    (cluster_enable_i),
+            .id_wr_data_i   (acts_mcn_id_scan_chain[numPeY*numPeX+y]),
+            .cast_tag_i     (act_mcn_tag_target_y),
+            .cast_data_i    (a_data_i),
+            .cast_data_o    (acts_data_x_bus[y]),
+            .load           ()
         );        
-
         
         multicast_controller #(
-            .idBits(idBits),
-            .dataSize(dataSize)
+            .idBits         (idSize),
+            .dataSize       (dataSize)
         ) u_weights_multicast_controller_y (
-            .clk(clk),
-            .nrst(nrst),
-            .ctrl_id_write(mc_controller_id_wren_i),
-            .ctrl_enable(cluster_enable_i),
-            .id_wr_data_i(weight_mcn_id_scan_chain[numPeY*numPeX+y]),
-            .cast_tag_i(weight_mcn_tag_target_y),
-            .cast_data_i(w_read_data_i),
-            .cast_data_o(weight_data_x_bus[y])
+            .clk            (clk),
+            .nrst           (nrst),
+            .ctrl_id_write  (weight_id_wren_i),
+            .ctrl_enable    (cluster_enable_i),
+            .id_wr_data_i   (weight_mcn_id_scan_chain[numPeY*numPeX+y]),
+            .cast_tag_i     (weight_mcn_tag_target_y),
+            .cast_data_i    (w_data_i),
+            .cast_data_o    (weight_data_x_bus[y]),
+            .load           ()
         );        
     end
 endgenerate
 
 
-typedef enum bit {
+typedef enum logic [1:0] {
     S_IDLE,
-    S_LOAD,
     S_COMPUTE,
     S_PARTIALSUMS
 } cluster_state_t;
@@ -210,22 +204,14 @@ always_comb begin : mainFSM_d
             if (start_compute_i) begin
                 state_d = S_COMPUTE;
             end 
-            if (start_load_i) begin
-                state_d = S_LOAD;
-            end
-        end 
-        S_LOAD : begin
-            if (done_load) begin
-                state_d = S_IDLE;
-            end
         end
         S_COMPUTE : begin
-            if (pe_done[0][0] == 0) begin
+            if (pe_done_o[0][0] == 1) begin
                 state_d = S_PARTIALSUMS;
             end
         end 
         S_PARTIALSUMS : begin
-            if (pe_done_o[0][numPeY-1] == 1) begin
+            if (pe_done_o[0][numPeY-1] == 1) begin //if the topmost PE is done, we done.
                 state_d = S_IDLE;
             end
         end
@@ -233,20 +219,47 @@ always_comb begin : mainFSM_d
     endcase
 end
 
+// Trigger sums
+logic [4:0] trigger_ctr;
+always_ff @( posedge clk or negedge nrst ) begin : triggerSum
+    if (!nrst) begin
+        pe_trigger_sums <= 0;
+        trigger_ctr <= 0;
+    end else begin
+        for (int i = 0; i < numPeX; i = i + 1) begin
+            if(state_d == S_PARTIALSUMS && trigger_ctr != ctrl_acount - ctrl_wcount + 1) begin
+                pe_trigger_sums[i] <= 1;
+                trigger_ctr <= trigger_ctr + 1;
+            end else begin
+                pe_trigger_sums[i] <= 0;
+                trigger_ctr <= 0;
+            end
+        end
+    end
+end
+// always_comb begin : triggerSum
+//     for (int i = 0; i < numPeX; i = i + 1) begin
+//         pe_trigger_sums[i] = 0;
+//         if(state_d == S_PARTIALSUMS) begin
+//             pe_trigger_sums[i] = 1;
+//         end
+//     end
+// end
+
 // Outputs : All the top PE outputs
 always_comb begin : outputAssign
-    for (i = 0; i < numPeX; i = i + 1) begin
+    for (int i = 0; i < numPeX; i = i + 1) begin
         outs_write_data_o[i] = pe_psum_o[i][numPeY];
-    end
-    outs_valid = pe_flag_psum_valid[numPeX-1][numPeY-1]; // any psum valid output on top will do
+    end // any psum valid output on top will do
 end
-always_ff @( posedge clk or negedge nrsts ) begin : outputInterface
+always_ff @( posedge clk or negedge nrst ) begin : outputInterface
     if (!nrst) begin
         outs_write_addr_o <= 0;
+        outs_valid <= 0;
     end else begin
-        // Increment everytime the output was valid
-        // Reset to zero upon return to idle state
-        case (state)
+        // Increment address everytime the output was valid
+        outs_valid <= pe_flag_psum_valid[numPeX-1][numPeY-1];
+        case (state_d)
             S_PARTIALSUMS: begin
                 if (outs_valid) begin
                     outs_write_addr_o <= outs_write_addr_o + 1;
@@ -262,94 +275,81 @@ end
 // ID scan chain logic
 always_ff @( posedge clk or negedge nrst ) begin : idScanChain
     if (!nrst) begin
-        for (int i = 0; i < numPeY*numPeX; i = i+1) begin
+        for (int i = 0; i < numRegMulticastNetwork; i = i+1) begin
             acts_mcn_id_scan_chain[i] <= 0;
             weight_mcn_id_scan_chain[i] <= 0;
         end
     end else begin
-        for (int i = 1; i < numPeY*numPeX; i = i+1) begin // Base case is 0
-            acts_mcn_id_scan_chain[i] <= acts_mcn_id_scan_chain[i-1];
-            weight_mcn_id_scan_chain[i] <= weight_mcn_id_scan_chain[i-1];
+        for (int i = 1; i < numRegMulticastNetwork; i = i+1) begin // Base case is 0
+            // Scan backwards because the ids.txt is more intuitive that way
+            acts_mcn_id_scan_chain[i-1] <= acts_mcn_id_scan_chain[i];
+            weight_mcn_id_scan_chain[i-1] <= weight_mcn_id_scan_chain[i];
         end
-        acts_mcn_id_scan_chain[0] <= act_id_scan_i;
-        weight_mcn_id_scan_chain[0] <= weight_id_scan_i;
+        acts_mcn_id_scan_chain[numRegMulticastNetwork-1] <= act_id_scan_i;
+        weight_mcn_id_scan_chain[numRegMulticastNetwork-1] <= weight_id_scan_i;
     end
 end
 
-// Load state logic
-always_ff @( posedge clk or negedge nrst ) begin : loadLogic
-    if (!nrst) begin
-        weight_mcn_tag_target_x <= 0;
-        weight_mcn_tag_target_y <= 0;
-        act_mcn_tag_target_x <= 0;
-        act_mcn_tag_target_y <= 0; 
+// TODO: Load logic should be exported to a different module
+// Which is very reconfigurable wrt layer type.
+// For now, let's have the testbench supply the tag targets.
 
-        // W/A input data is hardwired into the inputs of the y-multicast networks
-        w_read_addr_o <= 0; 
-        a_read_addr_o <= 0;
+// // Load state logic
+// logic n_acts_load_in_pe;
+// logic n_weights_load_in_pe;
+// logic done_load_a;
+// logic done_load_w;
+// always_ff @( posedge clk or negedge nrst ) begin : loadLogic
+//     if (!nrst) begin
+//         weight_mcn_tag_target_x <= 0;
+//         weight_mcn_tag_target_y <= 0;
+//         act_mcn_tag_target_x <= 0;
+//         act_mcn_tag_target_y <= 0; 
 
-    end else begin
-        case (state_d)
-            S_LOAD : begin
-                // Let's keep the Y tag targets at 0 for now (these control strides, see Eyeriss V1)
-                weight_mcn_tag_target_y <= 0;
-                act_mcn_tag_target_y <= 0;
+//         // W/A input data is hardwired into the inputs of the y-multicast networks
+//         w_read_addr_o <= 0; 
+//         a_read_addr_o <= 0;
 
-                // TODO: Maybe we can do acts_load_done || weights_load_done to get out of the S_LOAD state
-                // and keep the acts and weights loading independent of each other, not in lockstep.            
+//         n_acts_load_in_pe <= 0;
+//         n_weights_load_in_pe <= 0;
 
-                // Tag targets are only incremented...
-                weight_mcn_tag_target_x <= weight_mcn_tag_target_x + 1;
-                act_mcn_tag_target_x <= acts_mcn_tag_target_x + 1;
+//     end else begin
+//         case (state_d)
+//             S_LOAD : begin
+//                 // Let's keep the Y tag targets at 0 for now (these control strides, see Eyeriss V1)
+//                 weight_mcn_tag_target_y <= 0;
+//                 act_mcn_tag_target_y <= 0;
 
-                // Assuming the image is flattened [X][Y] in the memory
-                w_read_addr_o <= w_read_addr_o + 1;
-                a_read_addr_o <= a_read_addr_o + 1;
-            end 
-            default: begin
-                w_read_addr_o <= 0;
-                a_read_addr_o <= 0;
-            end
-        endcase
-    end
-end
+//                 if (n_acts_load_in_pe == ctrl_acount) begin
+//                     n_acts_load_in_pe <= 0;
+//                     act_mcn_tag_target_x <= acts_mcn_tag_target_x + 1;
+//                 end else begin
+//                     n_acts_load_in_pe <= n_acts_load_in_pe + 1;
+//                 end
 
-// Compute state logic
-logic cycle_count;
-always_ff @( posedge clk or negedge nrst ) begin : computeLogic
-    if (!nrst) begin
-        ctrl_start <= 0;
-        cycle_count <= 0;
-    end else begin
-        case (state_q)
-            S_IDLE : begin
-                cycle_count <= 0; 
-                if (start_compute_i) begin
-                    ctrl_start <= 1;
-                end 
-            end
-            S_COMPUTE : begin
-                ctrl_start <= 0;
-                if (pe_done_o[0][0] == 1) begin // doesn't matter which PE is done, they're all done at the same time.
-                    cycle_count <= 0;
-                end else begin
-                    cycle_count <= cycle_count + 1;
-                end
-            end
-            S_PARTIALSUMS : begin
-                ctrl_start <= 0;
-                if (pe_done_o[0][numPeY-1] == 1) begin
-                    cycle_count <= 0;
-                end else begin
-                    cycle_count <= cycle_count + 1;
-                end
-            end
-            default: begin
-                cycle_count <= 0;
-                ctrl_start <= 0;
-            end 
-        endcase
-    end
-end
+//                 if (n_weights_load_in_pe == ctrl_wcount) begin
+//                     n_weights_load_in_pe <= 0;
+//                     weight_mcn_tag_target_x <= weight_mcn_tag_target_x + 1;
+//                 end else begin
+//                     n_weights_load_in_pe <= n_weights_load_in_pe + 1;
+//                 end
+                
+//                 // Assuming the image is flattened [X][Y] in the memory
+//                 w_read_addr_o <= w_read_addr_o + 1;
+//                 a_read_addr_o <= a_read_addr_o + 1;
+//             end 
+//             default: begin
+//                 w_read_addr_o <= 0;
+//                 a_read_addr_o <= 0;
+//                 n_acts_load_in_pe <= 0;
+//                 n_weights_load_in_pe <= 0;
+//                 act_mcn_tag_target_x <= 0;
+//                 act_mcn_tag_target_y <= 0;
+//                 weight_mcn_tag_target_x <= 0;
+//                 weight_mcn_tag_target_y <= 0;
+//             end
+//         endcase
+//     end
+// end
 
 endmodule
