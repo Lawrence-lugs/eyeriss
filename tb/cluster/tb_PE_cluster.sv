@@ -2,9 +2,13 @@
 
 module tb_PE_cluster;
 
+// Parameters of layer
+parameter nActs = 16;
+parameter nWeights = 3;
+
 // Parameters for DUT
-parameter numPeX = 3;
-parameter numPeY = 3;
+localparam numPeX = nActs - nWeights + 1;
+localparam numPeY = nWeights;
 parameter interfaceSize = 64;
 parameter dataSize = 8;
 parameter wSpadNReg = 16;
@@ -19,9 +23,6 @@ localparam numRegMulticastNetwork = numPeY*numPeX+numPeY;
 // Local parameters
 parameter CLK_PERIOD = 20;
 parameter unsigned MAX_CYCLES = 1_000_000_000;
-localparam wBufferDepth = 2**16;
-localparam aBufferDepth = 2**16;
-localparam oBufferDepth = 2**16;
 
 // File handles
 integer a_file, w_file, o_file, act_id_file, weight_id_file;
@@ -33,11 +34,6 @@ integer output_count;
 integer output_element;
 integer outputDimensionX;
 integer outputDimensionY;
-
-// Test memories
-logic signed [wBufferDepth-1:0][dataSize-1:0] weight_buffer;
-logic signed [aBufferDepth-1:0][dataSize-1:0] act_buffer;
-logic signed [oBufferDepth-1:0][numPeX-1:0][dataSize-1:0] out_buffer;
 
 // DUT Ports
 logic clk;
@@ -101,7 +97,7 @@ localparam aMemSize = 1024;
 // localparam oMemSize = 10;
 logic signed [wMemSize-1:0][dataSize-1:0]                w_mem;
 logic signed [aMemSize-1:0][dataSize-1:0]                a_mem;
-logic signed [numPeX-1:0][numPeY-1:0][macResSize-1:0]    o_mem;
+logic signed [numPeX-1:0][numPeX-1:0][macResSize-1:0]    o_mem;
 
 always @(posedge clk or negedge nrst) begin : registeredOmem
     if (!nrst) begin
@@ -153,8 +149,8 @@ initial begin
     weight_id_scan_i = -1;
 
     // Cluster config
-    ctrl_acount = 5;
-    ctrl_wcount = 3;
+    ctrl_acount = nActs;
+    ctrl_wcount = nWeights;
 
     // Reset
     #(CLK_PERIOD*2);
@@ -191,13 +187,13 @@ initial begin
     // This testbench acts as a surrogate load and config controller for now.
     // The tag order files tell the testbench in what order to write what's present in the memory.
     $display("Loading in weights...");
-    while(!$feof(weights_tag_order_file)) begin
+    for (int i = 0; i < ctrl_wcount; i = i + 1) begin
         scan_file = $fscanf(weights_tag_order_file, "%d", weight_mcn_tag_target_y);
         scan_file = $fscanf(weights_tag_order_file, "%d", weight_mcn_tag_target_x);
 
         for (int i = 0; i < ctrl_wcount; i = i + 1) begin
             scan_file = $fscanf(w_file, "%d", w_data_i);
-            $display("Wrote weight %d to tag (%d,%d)",w_data_i,weight_mcn_tag_target_x,weight_mcn_tag_target_y);
+            $display("%d Wrote weight %d to tag (%d,%d)",i, w_data_i,weight_mcn_tag_target_x,weight_mcn_tag_target_y);
             
             #(CLK_PERIOD);
         end
@@ -206,7 +202,7 @@ initial begin
     weight_mcn_tag_target_x = -1;
 
     $display("Loading in acts...");
-    while(!$feof(acts_tag_order_file)) begin
+    for (int i = 0; i < ctrl_acount; i = i + 1) begin
         scan_file = $fscanf(acts_tag_order_file, "%d", act_mcn_tag_target_y);
         scan_file = $fscanf(acts_tag_order_file, "%d", act_mcn_tag_target_x);
 
