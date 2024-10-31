@@ -3,7 +3,7 @@
 module tb_PE_cluster;
 
 // Parameters for DUT
-parameter numPeX = 4;
+parameter numPeX = 3;
 parameter numPeY = 3;
 parameter interfaceSize = 64;
 parameter dataSize = 8;
