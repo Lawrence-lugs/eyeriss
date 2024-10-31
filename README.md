@@ -1,10 +1,15 @@
 # Row Stationary Convolution Accelerator
 
-Has a PE modelled after eyeriss
+PE Cluster modelled after Eyeriss
+
+### How to run
+
+1. Run test.ipynb in one of the folders to create the input text files.
+2. `cd sim`
+2. and then you can use your simulator of choice.
 
 ### Todo
 
-* PE saturation logic
-* Cluster level
-* Router & Buffer logic
-* Signed multiplication :D
+* PE cluster control based on layer information metadata (currently the row-stationary control is inside a testbench)
+* Saturation logic + lower output precision
+* Actual buffer logic, single cycle input delay

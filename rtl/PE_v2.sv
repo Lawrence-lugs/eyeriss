@@ -116,7 +116,7 @@ s_spad // Sum Spad
 
 always_comb begin : multAdd
     mult_res = w_reg * a_reg;
-    mac_res = mult_res + ps_reg; // Take upper bits of multiplication result
+    mac_res = mult_res + ps_reg; // For now, no saturation full precision
 end
 
 /* PE logic */

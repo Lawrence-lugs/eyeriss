@@ -2,8 +2,8 @@
 
 module tb_PE_cluster;
 
-// Parameters from DUT
-parameter numPeX = 3;
+// Parameters for DUT
+parameter numPeX = 4;
 parameter numPeY = 3;
 parameter interfaceSize = 64;
 parameter dataSize = 8;
@@ -14,6 +14,7 @@ parameter idSize = 8;
 parameter addrSize = 16;
 localparam multResSize = dataSize*2;
 localparam macResSize = multResSize + 4;
+localparam numRegMulticastNetwork = numPeY*numPeX+numPeY;
 
 // Local parameters
 parameter CLK_PERIOD = 20;
@@ -165,7 +166,7 @@ initial begin
     // Careful: Make sure the id files do not have extra spaces
     $display("Scanning in multicast IDs for acts...");
     $write("ActID scan in order: ");
-    while(!$feof(act_id_file)) begin
+    for (int i = 0; i < numRegMulticastNetwork; i = i + 1) begin
         scan_file = $fscanf(act_id_file, "%d", act_id_scan_i);
         $write("%d ", act_id_scan_i);
         #(CLK_PERIOD);
@@ -176,7 +177,7 @@ initial begin
     act_id_wren_i = 0;
     $display("Scanning in multicast IDs for weights...");
     $write("WeightID scan in order: ");
-    while(!$feof(weight_id_file)) begin
+    for (int i = 0; i < numRegMulticastNetwork; i = i + 1) begin
         scan_file = $fscanf(weight_id_file, "%d", weight_id_scan_i);
         $write("%d ", weight_id_scan_i);
         #(CLK_PERIOD);
