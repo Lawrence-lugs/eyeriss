@@ -72,6 +72,10 @@ logic [$clog2(rfNumRegister)-1:0] s_spad_addr;
 logic [macResSize-1:0] s_spad_rd_data;
 logic s_spad_wr_en;
 
+logic [15:0] opos;
+logic [15:0] ocount;
+assign ocount = ctrl_acount + 1 - ctrl_wcount;
+
 Spad
 #(
     .dataSize(dataSize),
@@ -128,11 +132,8 @@ enum logic [2:0] {
     COMPUTE         = 3'b100
 } state;
 
-/*
-Output position counter
-*/
+/* Output position counter */
 
-logic [15:0] opos;
 
 always_ff @( posedge clk or negedge nrst ) begin : peFSM
     if (!nrst) begin
@@ -225,7 +226,7 @@ always_ff @( posedge clk or negedge nrst ) begin : peFSM
                     w_reg <= w_spad_rd_data;
                     a_reg <= a_spad_rd_data;
 
-                    if (opos == ctrl_acount + 1 - ctrl_wcount) begin // All PSums generated
+                    if (opos == ocount) begin // All PSums generated
                         opos <= 0;
                         state <= IDLE;
                         flag_done <= 1;

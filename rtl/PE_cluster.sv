@@ -63,8 +63,12 @@ logic [numPeX-1:0][numPeY-1:0]                  pe_a_load_en;
 logic [numPeX-1:0]                              pe_trigger_sums;
 
 // ID SCAN CHAIN NETS
-logic [numPeX*numPeY+numPeY-1:0][idSize-1:0] weight_mcn_id_scan_chain;
-logic [numPeX*numPeY+numPeY-1:0][idSize-1:0] acts_mcn_id_scan_chain;
+logic [numRegMulticastNetwork-1:0][idSize-1:0] weight_mcn_id_scan_chain;
+logic [numRegMulticastNetwork-1:0][idSize-1:0] acts_mcn_id_scan_chain;
+logic [numPeX-1:0][numPeY-1:0][idSize-1:0] weights_id_x;
+logic [numPeX-1:0][numPeY-1:0][idSize-1:0] acts_id_x;
+logic [numPeY-1:0][idSize-1:0] weights_id_y;
+logic [numPeY-1:0][idSize-1:0] acts_id_y;
 
 // MULTICAST NETWORK NETS
 logic [numPeY-1:0][dataSize-1:0] weight_data_x_bus;
@@ -88,8 +92,8 @@ generate
                 .clk            (clk),
                 .nrst           (nrst),
 
-                .weights_i      (pe_weights_i[x][y]),
-                .acts_i         (pe_acts_i[x][y]),
+                .weights_i      (w_data_i),
+                .acts_i         (a_data_i),
                 
                 .psum_o         (pe_psum_o[x][y+1]),
                 .psum_i         (pe_psum_o[x][y]),
@@ -107,36 +111,6 @@ generate
 
                 .flag_done      (pe_done_o[x][y])
             );
-
-            multicast_controller #(
-                .idBits         (idSize),
-                .dataSize       (dataSize)
-            ) u_weight_multicast_controller_x (
-                .clk            (clk),
-                .nrst           (nrst),
-                .ctrl_id_write  (weight_id_wren_i),
-                .ctrl_enable    (cluster_enable_i),
-                .id_wr_data_i   (weight_mcn_id_scan_chain[x*numPeY+y]),
-                .cast_tag_i     (weight_mcn_tag_target_x),
-                .cast_data_i    (weight_data_x_bus[y]),
-                .cast_data_o    (pe_weights_i[x][y]),
-                .load           (pe_w_load_en[x][y])
-            );
-
-            multicast_controller #(
-                .idBits         (idSize),
-                .dataSize       (dataSize)
-            ) u_acts_multicast_controller_x (
-                .clk            (clk),
-                .nrst           (nrst),
-                .ctrl_id_write  (act_id_wren_i),
-                .ctrl_enable    (cluster_enable_i),
-                .id_wr_data_i   (acts_mcn_id_scan_chain[x*numPeY+y]),
-                .cast_tag_i     (act_mcn_tag_target_x),
-                .cast_data_i    (acts_data_x_bus[y]),
-                .cast_data_o    (pe_acts_i[x][y]),
-                .load           (pe_a_load_en[x][y])
-            );
         end
 
         assign pe_flag_psum_valid[x][0] = pe_trigger_sums[x];
@@ -144,42 +118,6 @@ generate
 
     end
 endgenerate
-
-// y-bus multicast controllers
-generate
-    for (y = 0; y < numPeY ; y = y + 1) begin : YBusMulticast
-        multicast_controller #(
-            .idBits         (idSize),
-            .dataSize       (dataSize)
-        ) u_acts_multicast_controller_y (
-            .clk            (clk),
-            .nrst           (nrst),
-            .ctrl_id_write  (act_id_wren_i),
-            .ctrl_enable    (cluster_enable_i),
-            .id_wr_data_i   (acts_mcn_id_scan_chain[numPeY*numPeX+y]),
-            .cast_tag_i     (act_mcn_tag_target_y),
-            .cast_data_i    (a_data_i),
-            .cast_data_o    (acts_data_x_bus[y]),
-            .load           ()
-        );        
-        
-        multicast_controller #(
-            .idBits         (idSize),
-            .dataSize       (dataSize)
-        ) u_weights_multicast_controller_y (
-            .clk            (clk),
-            .nrst           (nrst),
-            .ctrl_id_write  (weight_id_wren_i),
-            .ctrl_enable    (cluster_enable_i),
-            .id_wr_data_i   (weight_mcn_id_scan_chain[numPeY*numPeX+y]),
-            .cast_tag_i     (weight_mcn_tag_target_y),
-            .cast_data_i    (w_data_i),
-            .cast_data_o    (weight_data_x_bus[y]),
-            .load           ()
-        );        
-    end
-endgenerate
-
 
 typedef enum logic [1:0] {
     S_IDLE,
@@ -265,6 +203,51 @@ always_ff @( posedge clk or negedge nrst ) begin : outputInterface
                 outs_write_addr_o <= 0;
             end 
         endcase
+    end
+end
+
+// Kausap ba ako
+always_comb begin : idTargeting
+    for (int x = 0; x < numPeX ; x = x + 1) begin
+        for (int y = 0; y < numPeX ; y = y + 1) begin
+            pe_a_load_en[x][y] = 0;
+            pe_w_load_en[x][y] = 0;
+            if (act_mcn_tag_target_x == acts_id_x[x][y] && act_mcn_tag_target_y == acts_id_y[y]) begin
+                pe_a_load_en[x][y] = 1;
+            end
+            if (weight_mcn_tag_target_x == weights_id_x[x][y] && weight_mcn_tag_target_y == weights_id_y[y]) begin
+                pe_w_load_en[x][y] = 1;
+            end
+        end
+    end
+end
+
+// ID registers
+always_ff @( posedge clk or negedge nrst ) begin : idRegisters
+    if (!nrst) begin
+        weights_id_x <= 0;
+        acts_id_x <= 0;
+    end else begin
+        if (act_id_wren_i) begin
+            for (int x = 0; x < numPeX; x = x + 1) begin
+                for (int y = 0; y < numPeY ; y = y + 1) begin
+                    acts_id_x[x][y] <= acts_mcn_id_scan_chain[x*numPeY+y];
+                end
+            end
+            for (int y = 0; y < numPeY ; y = y + 1) begin
+                acts_id_y[y] <= acts_mcn_id_scan_chain[numPeX*numPeY+y];
+            end
+        end
+        if (weight_id_wren_i) begin
+            for (int x = 0; x < numPeX; x = x + 1) begin
+                for (int y = 0; y < numPeY ; y = y + 1) begin
+                    weights_id_x[x][y] <= weight_mcn_id_scan_chain[x*numPeY+y];
+                end
+            end
+            for (int y = 0; y < numPeY ; y = y + 1) begin
+                weights_id_y[y] <= weight_mcn_id_scan_chain[numPeX*numPeY+y];
+            end
+        end
     end
 end
 
