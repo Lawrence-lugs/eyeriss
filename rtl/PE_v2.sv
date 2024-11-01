@@ -145,8 +145,8 @@ always_ff @( posedge clk or negedge nrst ) begin : peFSM
         w_spad_addr <= 0;
         a_spad_addr <= 0;
         s_spad_addr <= -1;
-        w_spad_wr_data <= 0;
         opos <= 0;
+        w_spad_wr_data <= 0;
         a_spad_wr_data <= 0;
         s_spad_wr_data <= 0;
         flag_done <= 0;
@@ -185,21 +185,21 @@ always_ff @( posedge clk or negedge nrst ) begin : peFSM
                         state <= IDLE;
                         // activations/weights must be loaded continuously
                         if (ctrl_loada) begin
-                            $display("PE %s: Loaded activation %d to addr %d",
-                                $sformatf("%m"),
-                                acts_i,
-                                a_spad_addr
-                            );
+                            // $display("PE %s: Loaded activation %d to addr %d",
+                            //     $sformatf("%m"),
+                            //     acts_i,
+                            //     a_spad_addr
+                            // );
                             a_spad_addr <= a_spad_addr + 1; 
                         end else begin
                             a_spad_addr <= 0;
                         end
                         if (ctrl_loadw) begin
-                            $display("PE %s: Loaded weight %d to addr %d",
-                                $sformatf("%m"),
-                                weights_i,
-                                w_spad_addr
-                            );
+                            // $display("PE %s: Loaded weight %d to addr %d",
+                            //     $sformatf("%m"),
+                            //     weights_i,
+                            //     w_spad_addr
+                            // );
                             w_spad_addr <= w_spad_addr + 1; 
                         end else begin
                             w_spad_addr <= 0;

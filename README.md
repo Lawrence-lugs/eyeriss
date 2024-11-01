@@ -2,10 +2,12 @@
 
 PE Cluster modelled after Eyeriss
 
-Completely flexible in terms of the activation size and kernel size
+Completely flexible in terms of the activation size and kernel size.
+
 Assumes square kernel and activations
 
 Generate the input files using the ipynb, and then change the top two
+
 parameters of the testbench before running.
 
 ### How to run

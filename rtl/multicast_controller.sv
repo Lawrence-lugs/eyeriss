@@ -31,10 +31,10 @@ always_ff @( posedge clk or negedge nrst ) begin : idConfig
     end else begin
         if (ctrl_id_write) begin
             id <= id_wr_data_i;
-            $display("MCC %s: Loaded ID %d",
-                $sformatf("%m"),
-                id_wr_data_i
-            );
+            // $display("MCC %s: Loaded ID %d",
+            //     $sformatf("%m"),
+            //     id_wr_data_i
+            // );
         end
     end
 end
