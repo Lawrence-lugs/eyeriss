@@ -1,0 +1,126 @@
+# Tests with VCS
+
+import subprocess
+import os
+import sys
+import pytest
+# from sclibs import lib_file_list 
+
+# vcs ../tb/cluster/tb_PE_cluster.sv ../rtl/PE_cluster.sv ../rtl/multicast_controller.sv ../rtl/PE_v2.sv ../rtl/Spad.sv -full64 -debug_pp -sverilog +neg_tchk -l vcs.log -R +lint=TFIPC-L | tee vcs.log
+
+simulator = 'vcs' # vcs or xrun
+sim_args = {'vcs':  [
+                '-full64',
+                '-debug_pp',
+                '-sverilog',
+                '+neg_tchk',
+                '-l', 'vcs.log',
+                '-R', '+lint=TFIPC-L',
+                '+define+SYNOPSYS'
+            ],
+            'xrun': [
+                '+access+r'
+            ]
+}
+
+def test_pe_cluster(simulator, seed=0):
+
+    rtl_file_list = [ 
+        '../rtl/PE_cluster.sv',
+        '../rtl/multicast_controller.sv',
+        '../rtl/PE.sv',
+        '../rtl/Spad.sv',
+    ]
+    tb_name = 'tb_PE_cluster'
+    tb_path = 'cluster'
+    stimulus_output_path = 'tb/cluster/inputs'
+
+    tb_file = f'../tb/{tb_path}/{tb_name}.sv'
+    log_file = f'tests/logs/{tb_name}_{simulator}.log'
+    
+    logdir = os.path.dirname(log_file)
+    os.makedirs(logdir,exist_ok=True)
+
+    # Pre-simulation
+
+    from stimulus_gen import generate_tb_cluster_stimulus
+
+    generate_tb_cluster_stimulus(
+        actBits = 3,
+        weightBits = 3,
+        nActs = 16,
+        nWeights = 3,
+        seed = seed,
+        path = stimulus_output_path
+    )
+
+    # Simulation
+
+    with open(log_file,'w+') as f:
+
+        sim = subprocess.Popen([
+            simulator,
+            tb_file
+        ] + sim_args[simulator] + rtl_file_list, 
+        shell=False,
+        cwd='./sims',
+        stdout=f
+        )
+
+    assert not sim.wait()
+
+    # Post-simulation
+
+    with open(log_file,'r+') as f:
+        f.seek(0)
+        out = [line for line in f.readlines()]
+        assert 'TEST SUCCESS\n' in out
+
+def test_pe(simulator,seed=0):
+
+    rtl_file_list = [ 
+        '../rtl/PE.sv',
+        '../rtl/Spad.sv',
+    ]
+    tb_name = 'tb_PE'
+    tb_path = 'PE'
+    stimulus_output_path = 'tb/PE/inputs'
+
+    tb_file = f'../tb/{tb_path}/{tb_name}.sv'
+    log_file = f'tests/logs/{tb_name}_{simulator}.log'
+    
+    logdir = os.path.dirname(log_file)
+    os.makedirs(logdir,exist_ok=True)
+
+    # Pre-simulation
+
+    from stimulus_gen import generate_tb_pe_stimulus
+
+    generate_tb_pe_stimulus(
+        actBits = 8,
+        weightBits = 8,
+        seed = seed,
+        path = stimulus_output_path
+    )
+
+    # Simulation
+
+    with open(log_file,'w+') as f:
+
+        sim = subprocess.Popen([
+            simulator,
+            tb_file
+        ] + sim_args[simulator] + rtl_file_list, 
+        shell=False,
+        cwd='./sims',
+        stdout=f
+        )
+
+    assert not sim.wait()
+
+    # Post-simulation
+
+    with open(log_file,'r+') as f:
+        f.seek(0)
+        out = [line for line in f.readlines()]
+        assert 'TEST SUCCESS\n' in out

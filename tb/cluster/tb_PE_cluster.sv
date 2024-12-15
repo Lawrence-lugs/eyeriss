@@ -21,7 +21,7 @@ localparam macResSize = multResSize + 4;
 localparam numRegMulticastNetwork = numPeY*numPeX+numPeY;
 
 // Local parameters
-parameter CLK_PERIOD = 20;
+localparam unsigned CLK_PERIOD = 20;
 parameter unsigned MAX_CYCLES = 1_000_000_000;
 
 // File handles
@@ -56,7 +56,7 @@ logic [numPeX-1:0][macResSize-1:0] outs_write_data_o;
 logic [addrSize-1:0] outs_write_addr_o;
 logic outs_valid;
 logic start_compute_i;
-
+ 
 // DUT instantiation
 PE_cluster #(
     .numPeX         (numPeX),
@@ -120,7 +120,7 @@ end
 // Test stimulus
 initial begin
 
-    string path = "../tb/cluster/";
+    static string path = "../tb/cluster/inputs/";
 
     a_file = $fopen({path, "a.txt"}, "r");
     w_file = $fopen({path, "w.txt"}, "r");
@@ -247,24 +247,34 @@ initial begin
 
     // Report results
     if (error_count == 0)
-        $display("Test passed :) successfully!");
+        $display("TEST SUCCESS");
     else
-        $display("Test failed :( successfully with %d errors", error_count);
+        $display("TEST FAILED");
+        $display("Error count: %d", error_count);
 
     $finish;
 end
 
 // Timeout watchdog
 initial begin
-    #(CLK_PERIOD*MAX_CYCLES);
-    $display("Error: Simulation timeout after %d cycles", MAX_CYCLES);
+    // Need to explicitly say unsigned here because xcelium
+    // somehow suffers from integer overflow on unsigned parameters
+    #($unsigned(CLK_PERIOD*MAX_CYCLES));
+    $display("Error: Simulation timeout after %d cycles @ %d period", MAX_CYCLES,CLK_PERIOD);
     $finish;
 end
 
+`ifdef SYNOPSYS
 initial begin    
     $vcdpluson;
     $vcdplusmemon;     
-    $vcdplusfile("wave.vpd"); 
+    $vcdplusfile("tb_PE_cluster.vpd"); 
 end
+`else
+initial begin
+    $dumpfile("tb_PE_cluster.vcd");
+    $dumpvars();
+end
+`endif
 
 endmodule

@@ -16,10 +16,10 @@ localparam multResSize = dataSize*2;
 localparam macResSize = multResSize + 4;
 
 // Signals
-logic [dataSize-1:0] weights_i;
-logic [dataSize-1:0] acts_i;
-logic [macResSize-1:0] psum_i;
-logic [macResSize-1:0] psum_o;
+logic signed [dataSize-1:0] weights_i;
+logic signed [dataSize-1:0] acts_i;
+logic signed [macResSize-1:0] psum_i;
+logic signed [macResSize-1:0] psum_o;
 logic ctrl_loadw;
 logic ctrl_loada;
 logic [7:0] ctrl_acount;
@@ -58,15 +58,15 @@ int i;
 int cc_count;
 int err_cnt;
 
-logic [macResSize-1:0] ref_o;
+logic signed [macResSize-1:0] ref_o;
 
 initial begin
-    $vcdplusfile("out.vpd");
-    $vcdpluson;
 
-    a_f = $fopen("/home/lquizon/lawrence-workspace/eyeriss/tb/a.txt","r");
-    o_f = $fopen("/home/lquizon/lawrence-workspace/eyeriss/tb/o.txt","r");
-    w_f = $fopen("/home/lquizon/lawrence-workspace/eyeriss/tb/w.txt","r");
+    static string path = "../tb/PE/inputs/";
+
+    a_f = $fopen({path, "a.txt"},"r");
+    o_f = $fopen({path, "o.txt"},"r");
+    w_f = $fopen({path, "w.txt"},"r");
 
     $display("======");
 
@@ -139,11 +139,23 @@ initial begin
     if(err_cnt)
         $display("%d errors were detected.",err_cnt);
     else
-        $display("Simulation success. No errors were detected.");
+        $display("TEST SUCCESS");
 
     $display("done.");
     $display("======");
     $finish;
 end
+
+`ifdef SYNOPSYS
+initial begin
+    $vcdplusfile("tb_PE.vpd");
+    $vcdpluson;
+end
+`else
+initial begin
+    $dumpfile("tb_PE.vcd");
+    $dumpvars();
+end
+`endif
 
 endmodule

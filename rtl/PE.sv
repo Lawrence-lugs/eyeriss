@@ -1,9 +1,11 @@
+
+// This PE does not have load states
+// Designed to work with multicast controller and cluster
+// ctrl_loadw and ctrl_loada no longer shift the state, but instead results in a write op and address increment.
+
 module PE
 #(
-    parameter interfaceSize = 64,
     parameter dataSize = 8,
-    parameter wSpadNReg = 16,
-    parameter aSpadNReg = 16,
     parameter rfNumRegister = 16,
     localparam multResSize = dataSize*2,
     localparam macResSize = multResSize + 4
@@ -12,10 +14,6 @@ module PE
     input clk,
     input nrst,
 
-    /* 
-    The original eyeriss uses a different interface dataSize 
-    that would be a hassle to handle for the spads.
-    */
     input signed [dataSize-1:0] weights_i,
     input signed [dataSize-1:0] acts_i, 
     input signed [macResSize-1:0] psum_i, 
@@ -67,6 +65,10 @@ logic [$clog2(rfNumRegister)-1:0] s_spad_addr;
 logic [macResSize-1:0] s_spad_rd_data;
 logic s_spad_wr_en;
 
+logic [15:0] opos;
+logic [15:0] ocount;
+assign ocount = ctrl_acount + 1 - ctrl_wcount;
+
 Spad
 #(
     .dataSize(dataSize),
@@ -75,9 +77,9 @@ Spad
 (
     .clk(clk),
     .nrst(nrst),
-    .wr_data(w_spad_wr_data),
+    .wr_data(weights_i),
     .addr(w_spad_addr),
-    .wr_en(w_spad_wr_en),
+    .wr_en(ctrl_loadw),
     .rd_data(w_spad_rd_data)
 );
 Spad 
@@ -89,9 +91,9 @@ a_spad // Activation Spad
 (
     .clk(clk),
     .nrst(nrst),
-    .wr_data(a_spad_wr_data),
+    .wr_data(acts_i),
     .addr(a_spad_addr),
-    .wr_en(a_spad_wr_en),
+    .wr_en(ctrl_loada),
     .rd_data(a_spad_rd_data)
 );
 Spad 
@@ -111,23 +113,18 @@ s_spad // Sum Spad
 
 always_comb begin : multAdd
     mult_res = w_reg * a_reg;
-    mac_res = mult_res + ps_reg; // Take upper bits of multiplication result
+    mac_res = mult_res + ps_reg; // For now, no saturation full precision
 end
 
 /* PE logic */
 
-enum logic [2:0] {
-    IDLE            = 3'b000,
-    LOAD_W          = 3'b001,
-    LOAD_A          = 3'b010,
-    COMPUTE         = 3'b100
+enum logic {
+    IDLE            = 1'b0,
+    COMPUTE         = 1'b1
 } state;
 
-/*
-Output position counter
-*/
+/* Output position counter */
 
-logic [15:0] opos;
 
 always_ff @( posedge clk or negedge nrst ) begin : peFSM
     if (!nrst) begin
@@ -140,8 +137,8 @@ always_ff @( posedge clk or negedge nrst ) begin : peFSM
         w_spad_addr <= 0;
         a_spad_addr <= 0;
         s_spad_addr <= -1;
-        w_spad_wr_data <= 0;
         opos <= 0;
+        w_spad_wr_data <= 0;
         a_spad_wr_data <= 0;
         s_spad_wr_data <= 0;
         flag_done <= 0;
@@ -151,73 +148,57 @@ always_ff @( posedge clk or negedge nrst ) begin : peFSM
     end else begin
         case (state)
             IDLE: begin
-                if (ctrl_loada) begin
-                    // Load a_count weights into aspad sequentially
-                    state <= LOAD_A;
-                    a_spad_wr_en <= 1;
-                    a_spad_wr_data <= acts_i;
-                    a_spad_addr <= 0;
+                if (ctrl_start) begin
+                    // Start compute
+                    state <= COMPUTE;
+                    w_reg <= w_spad_rd_data;
+                    a_reg <= a_spad_rd_data;
+                    ps_reg <= 0;
+                    w_spad_addr <= w_spad_addr + 1;
+                    a_spad_addr <= a_spad_addr + 1;
                 end else begin
-                    if (ctrl_loadw) begin
-                        // Load w_count weights into wspad sequentially
-                        state <= LOAD_W;
-                        w_spad_wr_en <= 1;
-                        w_spad_wr_data <= weights_i;
-                        w_spad_addr <= 0;
-                    end else begin
-                        if (ctrl_start) begin
-                            // Start compute
-                            // In idle, w_addr and a_addr = 0
-                            state <= COMPUTE;
-                            w_reg <= w_spad_rd_data;
-                            a_reg <= a_spad_rd_data;
-                            ps_reg <= 0;
-                            w_spad_addr <= w_spad_addr + 1;
-                            a_spad_addr <= a_spad_addr + 1;
+                    if (ctrl_sums) begin 
+                        // Systolic summing
+                        psum_o <= s_spad_rd_data + psum_i;
+                        s_spad_wr_data <= s_spad_rd_data + psum_i;
+                        s_spad_wr_en <= 1;
+                        flag_psum_valid <= 1;
+                        if (s_spad_addr == ctrl_acount - ctrl_wcount) begin
+                            flag_done <= 1;
+                            s_spad_addr <= -1;
                         end else begin
-                            if (ctrl_sums) begin 
-                                // IDLE can also handle systolic summation of psums
-                                // PE output flag_psum_valid goes into the next PE's ctrl_sums for systolic operation
-                                // Bottom PE's ctrl_sums is controlled by the cluster control.
-                                // Add own psum and pass up
-                                psum_o <= s_spad_rd_data + psum_i;
-                                flag_psum_valid <= 1;
-                                if (s_spad_addr == ctrl_acount + 1 - ctrl_wcount) begin
-                                    s_spad_addr <= 0;
-                                end else begin
-                                    s_spad_addr <= s_spad_addr + 1; // increment spad target
-                                end
-                            end else begin
-                                state <= IDLE;
-                            end
+                            flag_done <= 0;
+                            s_spad_addr <= s_spad_addr + 1;
+                        end
+                    end else begin
+                        s_spad_wr_en <= 0;
+                        flag_done <= 0;                        
+                        flag_psum_valid <= 0;
+                        state <= IDLE;
+                        // activations/weights must be loaded continuously
+                        if (ctrl_loada) begin
+                            // $display("PE %s: Loaded activation %d to addr %d",
+                            //     $sformatf("%m"),
+                            //     acts_i,
+                            //     a_spad_addr
+                            // );
+                            a_spad_addr <= a_spad_addr + 1; 
+                        end else begin
+                            a_spad_addr <= 0;
+                        end
+                        if (ctrl_loadw) begin
+                            // $display("PE %s: Loaded weight %d to addr %d",
+                            //     $sformatf("%m"),
+                            //     weights_i,
+                            //     w_spad_addr
+                            // );
+                            w_spad_addr <= w_spad_addr + 1; 
+                        end else begin
+                            w_spad_addr <= 0;
                         end
                     end
                 end
             end 
-            LOAD_W: begin
-                w_spad_wr_data <= weights_i;
-                if (w_spad_addr == ctrl_wcount - 1) begin
-                    state <= IDLE;
-                    w_spad_wr_en <= 0;
-                    w_spad_addr <= 0;
-                end else begin
-                    state <= LOAD_W;
-                    w_spad_wr_en <= 1;
-                    w_spad_addr <= w_spad_addr + 1;
-                end
-            end
-            LOAD_A: begin
-                a_spad_wr_data <= acts_i;
-                if (a_spad_addr == ctrl_acount - 1) begin
-                    state <= IDLE;
-                    a_spad_wr_en <= 0;
-                    a_spad_addr <= 0;
-                end else begin
-                    state <= LOAD_A;
-                    a_spad_wr_en <= 1;
-                    a_spad_addr <= a_spad_addr + 1;
-                end
-            end
             COMPUTE: begin
                 // PSReg and Writeback is in a staggered cycle (pipelining)
                 if (w_spad_addr == 0) begin
@@ -236,7 +217,7 @@ always_ff @( posedge clk or negedge nrst ) begin : peFSM
                     w_reg <= w_spad_rd_data;
                     a_reg <= a_spad_rd_data;
 
-                    if (opos == ctrl_acount + 1 - ctrl_wcount) begin // All PSums generated
+                    if (opos == ocount) begin // All PSums generated
                         opos <= 0;
                         state <= IDLE;
                         flag_done <= 1;

@@ -1,0 +1,7 @@
+DVEfiles
+mapped
+sims
+synth
+*.sh
+tests/logs
+*__pycache__*

@@ -12,9 +12,11 @@ There are two versions of the cluster: one with a behavioral multicast network d
 
 ### How to run
 
-1. Run test.ipynb in one of the folders to create the input text files.
-2. `cd sim`
-3. and then you can use your simulator of choice.
+Run `pytest tests -s --simulator=vcs --seed=0`. 
+This will run all the tests in the tests directory, and output the testbench outputs to tests/log.
+Changing the seed will change the values for all test arrays (but not the sizes thereof).
+
+To test against sizes, manually modify test_all.py and change the appropriate values in the calls to the stimulus generators.
 
 ### Todo
 
