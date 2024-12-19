@@ -23,7 +23,59 @@ sim_args = {'vcs':  [
             ]
 }
 
-def test_pe_cluster(simulator, seed=0):
+@pytest.mark.parametrize('mode',['random','max','min'])
+def test_pe(mode, simulator='vcs',seed=0):
+
+    rtl_file_list = [ 
+        '../rtl/PE.sv',
+        '../rtl/Spad.sv',
+    ]
+    tb_name = 'tb_PE'
+    tb_path = 'PE'
+    stimulus_output_path = 'tb/PE/inputs'
+
+    tb_file = f'../tb/{tb_path}/{tb_name}.sv'
+    log_file = f'tests/logs/{tb_name}_{simulator}.log'
+    
+    logdir = os.path.dirname(log_file)
+    os.makedirs(logdir,exist_ok=True)
+
+    # Pre-simulation
+
+    from stimulus_gen import generate_tb_pe_stimulus
+
+    generate_tb_pe_stimulus(
+        actBits = 8,
+        weightBits = 8,
+        seed = seed,
+        path = stimulus_output_path,
+        mode = mode
+    )
+
+    # Simulation
+
+    with open(log_file,'w+') as f:
+
+        sim = subprocess.Popen([
+            simulator,
+            tb_file
+        ] + sim_args[simulator] + rtl_file_list, 
+        shell=False,
+        cwd='./sims',
+        stdout=f
+        )
+
+    assert not sim.wait(), get_log_tail(log_file,10)
+
+    # Post-simulation
+
+    with open(log_file,'r+') as f:
+        f.seek(0)
+        out = [line for line in f.readlines()]
+        assert 'TEST SUCCESS\n' in out, get_log_tail(log_file,10)
+
+@pytest.mark.parametrize('mode',['random','max','min'])
+def test_pe_cluster(mode, simulator='vcs', seed=0):
 
     rtl_file_list = [ 
         '../rtl/PE_cluster.sv',
@@ -51,7 +103,8 @@ def test_pe_cluster(simulator, seed=0):
         nActs = 16,
         nWeights = 3,
         seed = seed,
-        path = stimulus_output_path
+        path = stimulus_output_path,
+        mode = mode
     )
 
     # Simulation
@@ -67,60 +120,18 @@ def test_pe_cluster(simulator, seed=0):
         stdout=f
         )
 
-    assert not sim.wait()
+    assert not sim.wait(), get_log_tail(log_file,10)
 
     # Post-simulation
 
     with open(log_file,'r+') as f:
         f.seek(0)
         out = [line for line in f.readlines()]
-        assert 'TEST SUCCESS\n' in out
+        assert 'TEST SUCCESS\n' in out, get_log_tail(log_file,10)
 
-def test_pe(simulator,seed=0):
 
-    rtl_file_list = [ 
-        '../rtl/PE.sv',
-        '../rtl/Spad.sv',
-    ]
-    tb_name = 'tb_PE'
-    tb_path = 'PE'
-    stimulus_output_path = 'tb/PE/inputs'
 
-    tb_file = f'../tb/{tb_path}/{tb_name}.sv'
-    log_file = f'tests/logs/{tb_name}_{simulator}.log'
-    
-    logdir = os.path.dirname(log_file)
-    os.makedirs(logdir,exist_ok=True)
-
-    # Pre-simulation
-
-    from stimulus_gen import generate_tb_pe_stimulus
-
-    generate_tb_pe_stimulus(
-        actBits = 8,
-        weightBits = 8,
-        seed = seed,
-        path = stimulus_output_path
-    )
-
-    # Simulation
-
-    with open(log_file,'w+') as f:
-
-        sim = subprocess.Popen([
-            simulator,
-            tb_file
-        ] + sim_args[simulator] + rtl_file_list, 
-        shell=False,
-        cwd='./sims',
-        stdout=f
-        )
-
-    assert not sim.wait()
-
-    # Post-simulation
-
-    with open(log_file,'r+') as f:
-        f.seek(0)
-        out = [line for line in f.readlines()]
-        assert 'TEST SUCCESS\n' in out
+def get_log_tail(log_file,lines):
+    with open(log_file,'r') as f:
+        lines = f.readlines()[-lines:]
+        return ''.join(lines)

@@ -9,6 +9,7 @@ def generate_tb_cluster_stimulus(
     nWeights = 3,
     seed = 0,
     path = 'tb_cluster',
+    mode = 'random'
 ):
 
     # Check if path exists
@@ -18,9 +19,22 @@ def generate_tb_cluster_stimulus(
     nOuts = nActs - nWeights + 1
 
     np.random.seed(0)
-    a = np.random.randint(-2**(actBits-1),2**(actBits-1)-1,size=(nActs,nActs))
-    w = np.random.randint(-2**(weightBits-1),2**(weightBits-1)-1,size=(nWeights,nWeights))
-    o = convolve2d(a,w[::-1].T[::-1].T,mode='valid')
+    if mode == 'random':
+        a = np.random.randint(-2**(actBits-1),2**(actBits-1)-1,size=(nActs,nActs))
+        w = np.random.randint(-2**(weightBits-1),2**(weightBits-1)-1,size=(nWeights,nWeights))
+        o = convolve2d(a,w[::-1].T[::-1].T,mode='valid')
+    if mode == 'max':
+        act_value = 2**(actBits-1) - 1
+        weight_value = 2**(weightBits-1) - 1
+        a = np.full((nActs, nActs), act_value)
+        w = np.full((nWeights, nWeights), weight_value)
+        o = np.convolve(a,w[::-1],'valid')
+    if mode == 'min':
+        act_value = -2**(actBits-1)
+        weight_value = -2**(weightBits-1)
+        a = np.full((nActs, nActs), act_value)
+        w = np.full((nWeights, nWeights), weight_value)
+        o = np.convolve(a,w[::-1],'valid')
 
     print(f'PE cluster must be {nOuts} PEs wide and {nWeights} PEs high ')
 
@@ -57,18 +71,34 @@ def generate_tb_cluster_stimulus(
 def generate_tb_pe_stimulus(
     actBits = 8,
     weightBits = 8,
+    nActs = 16,
+    nWeights = 3,
     seed = 0,
     path = 'tb_PE',
+    mode = 'random' # 'max', 'min', 'random'
 ):
 
     # Check if path exists
     if not os.path.exists(path):
         raise ValueError(f'Path {path} does not exist.')
 
-    np.random.seed(0)    
-    a = np.random.randint(-2**(actBits-1),2**(actBits-1)-1,size=16)
-    w = np.random.randint(-2**(weightBits-1),2**(weightBits-1)-1,size=3)
-    o = np.convolve(a,w[::-1],'valid')
+    if mode == 'random':
+        np.random.seed(0)    
+        a = np.random.randint(-2**(actBits-1),2**(actBits-1)-1,size=nActs)
+        w = np.random.randint(-2**(weightBits-1),2**(weightBits-1)-1,size=nWeights)
+        o = np.convolve(a,w[::-1],'valid')
+    if mode == 'max':
+        act_value = 2**(actBits-1) - 1
+        weight_value = 2**(weightBits-1) - 1
+        a = np.full((nActs), act_value)
+        w = np.full((nWeights), weight_value)
+        o = np.convolve(a,w[::-1],'valid')
+    if mode == 'min':
+        act_value = -2**(actBits-1)
+        weight_value = -2**(weightBits-1)
+        a = np.full((nActs), act_value)
+        w = np.full((nWeights), weight_value)
+        o = np.convolve(a,w[::-1],'valid')
 
     np.savetxt(path + '/a.txt',a,'%i')
     np.savetxt(path + '/w.txt',w,'%i')

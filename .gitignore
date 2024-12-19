@@ -5,3 +5,4 @@ synth
 *.sh
 tests/logs
 *__pycache__*
+*synlibs*

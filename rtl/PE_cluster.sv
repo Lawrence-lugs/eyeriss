@@ -1,6 +1,6 @@
 module PE_cluster
 #(
-    parameter numPeX = 3,
+    parameter numPeX = 14,
     parameter numPeY = 3,
 
     // PE parameters
@@ -84,10 +84,7 @@ generate
     for (x = 0; x < numPeX; x = x+1) begin : PeArrayX
         for (y = 0; y < numPeY; y = y+1) begin : PeArrayY
             PE #(
-                .interfaceSize  (interfaceSize),
-                .dataSize       (dataSize),
-                .wSpadNReg      (wSpadNReg),
-                .aSpadNReg      (aSpadNReg)
+                .dataSize       (dataSize)
             ) u_pe (
                 .clk            (clk),
                 .nrst           (nrst),

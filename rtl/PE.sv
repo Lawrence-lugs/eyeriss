@@ -38,9 +38,7 @@ module PE
 The PE must be able to handle a 1D convolution on its own using the scratchpads.
 */
 
-
 /* Activation Preregisters */
-
 logic signed [dataSize-1:0] a_reg;
 logic signed [dataSize-1:0] w_reg;
 
@@ -207,7 +205,7 @@ always_ff @( posedge clk or negedge nrst ) begin : peFSM
                     s_spad_wr_data <= mac_res;
                     s_spad_wr_en <= 1;
                 end else begin
-                    ps_reg <= ps_reg + mult_res;
+                    ps_reg <= $signed(ps_reg) + $signed(mult_res);
                     s_spad_wr_en <= 0;
                 end
                 if (w_spad_addr == ctrl_wcount - 1) begin // PSum is done
