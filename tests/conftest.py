@@ -9,6 +9,18 @@ def pytest_addoption(parser):
         default=[],
         help="simulator to test with",
     )
+    parser.addoption(
+        "--synth",
+        action="append",
+        default=False,
+        help="performs synthesis during tests",
+    )
+    parser.addoption(
+        "--postsynth",
+        action="store_true",
+        default=False,
+        help="performs post-synthesis simulation during tests",
+    )
 
 def pytest_generate_tests(metafunc):
     if "simulator" in metafunc.fixturenames:
@@ -22,3 +34,6 @@ def pytest_generate_tests(metafunc):
 
     if 'seed' in metafunc.fixturenames:
         metafunc.parametrize("seed", metafunc.config.getoption("seed")[0])
+
+    if 'synth' in metafunc.fixturenames:
+        metafunc.parametrize("synth", metafunc.config.getoption("synth"))

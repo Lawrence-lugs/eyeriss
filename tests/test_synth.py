@@ -17,6 +17,7 @@ sim_args = {'vcs':  [
             ]
 }
 
+@pytest.mark.skipif("not config.getoption('synth')")
 def test_cluster_synthesizability():
 
     design_name = 'cluster'
@@ -41,6 +42,7 @@ def test_cluster_synthesizability():
 
     assert not sim.wait(), get_log_tail(log_file,30)
 
+@pytest.mark.skipif("not config.getoption('postsynth')")
 def test_cluster_postsynth(simulator='vcs',seed=0):
 
     rtl_file_list = [
