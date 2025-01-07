@@ -109,8 +109,16 @@ s_spad // Sum Spad
     .rd_data(s_spad_rd_data)
 );
 
+saturating_multiplier #(
+    .bitWidth(dataSize)
+) u_sat_mult (
+    .a(a_reg),
+    .b(w_reg),
+    .result(mult_res)
+);
+
 always_comb begin : multAdd
-    mult_res = w_reg * a_reg;
+    // mult_res = w_reg * a_reg; -- has since been replaced with the saturating multiplier
     mac_res = mult_res + ps_reg; // For now, no saturation full precision
 end
 

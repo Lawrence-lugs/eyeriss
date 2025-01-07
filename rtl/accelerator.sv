@@ -1,7 +1,7 @@
 module accelerator #(
     globalBufferSize = 1024,
-    dataSize = 8,
-    globalBufferInterfaceSize =  
+    globalBufferInterfaceSize = 16,
+    dataSize = 8
 ) (
     
 );

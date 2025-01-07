@@ -29,6 +29,7 @@ def test_pe(mode, simulator='vcs',seed=0):
     rtl_file_list = [ 
         '../rtl/PE.sv',
         '../rtl/Spad.sv',
+        '../rtl/saturating_multiplier.sv',
     ]
     tb_name = 'tb_PE'
     tb_path = 'PE'
@@ -82,6 +83,7 @@ def test_pe_cluster(mode, simulator='vcs', seed=0):
         '../rtl/multicast_controller.sv',
         '../rtl/PE.sv',
         '../rtl/Spad.sv',
+        '../rtl/saturating_multiplier.sv',
     ]
     tb_name = 'tb_PE_cluster'
     tb_path = 'cluster'
