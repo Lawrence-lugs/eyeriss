@@ -44,7 +44,7 @@ logic signed [dataSize-1:0] w_reg;
 
 logic signed [macResSize-1:0] mac_res; // Bit growth -> + $clog(maxKernelSize), use 4 for now
 logic signed [multResSize-1:0] mult_res;
-logic signed [multResSize-1:0] ps_reg;
+logic signed [macResSize-1:0] ps_reg;
 
 /* Spads instantiation */
 

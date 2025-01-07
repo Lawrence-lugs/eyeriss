@@ -42,8 +42,9 @@ def test_cluster_synthesizability():
 
     assert not sim.wait(), get_log_tail(log_file,30)
 
+@pytest.mark.parametrize('mode',['random','max','min'])
 @pytest.mark.skipif("not config.getoption('postsynth')")
-def test_cluster_postsynth(simulator='vcs',seed=0):
+def test_cluster_postsynth(mode, simulator='vcs',seed=0):
 
     rtl_file_list = [
         '../mapped/mapped_PE_cluster.v'
@@ -54,7 +55,7 @@ def test_cluster_postsynth(simulator='vcs',seed=0):
     stimulus_output_path = f'tb/cluster/inputs'
 
     tb_file = f'../tb/{tb_path}/{tb_name}.sv'
-    log_file = f'tests/logs/{tb_name}_{simulator}_postsynth.log'
+    log_file = f'tests/logs/{tb_name}_{simulator}_{mode}_postsynth.log'
     
     logdir = os.path.dirname(log_file)
     os.makedirs(logdir,exist_ok=True)

@@ -35,7 +35,7 @@ def test_pe(mode, simulator='vcs',seed=0):
     stimulus_output_path = 'tb/PE/inputs'
 
     tb_file = f'../tb/{tb_path}/{tb_name}.sv'
-    log_file = f'tests/logs/{tb_name}_{simulator}.log'
+    log_file = f'tests/logs/{tb_name}_{simulator}_{mode}.log'
     
     logdir = os.path.dirname(log_file)
     os.makedirs(logdir,exist_ok=True)
@@ -88,7 +88,7 @@ def test_pe_cluster(mode, simulator='vcs', seed=0):
     stimulus_output_path = 'tb/cluster/inputs'
 
     tb_file = f'../tb/{tb_path}/{tb_name}.sv'
-    log_file = f'tests/logs/{tb_name}_{simulator}.log'
+    log_file = f'tests/logs/{tb_name}_{simulator}_{mode}.log'
     
     logdir = os.path.dirname(log_file)
     os.makedirs(logdir,exist_ok=True)
@@ -132,6 +132,7 @@ def test_pe_cluster(mode, simulator='vcs', seed=0):
 
 
 def get_log_tail(log_file,lines):
+    print(f'See {log_file} for details') 
     with open(log_file,'r') as f:
         lines = f.readlines()[-lines:]
         return ''.join(lines)

@@ -28,13 +28,13 @@ def generate_tb_cluster_stimulus(
         weight_value = 2**(weightBits-1) - 1
         a = np.full((nActs, nActs), act_value)
         w = np.full((nWeights, nWeights), weight_value)
-        o = np.convolve(a,w[::-1],'valid')
+        o = convolve2d(a,w[::-1].T[::-1].T,mode='valid')
     if mode == 'min':
         act_value = -2**(actBits-1)
         weight_value = -2**(weightBits-1)
         a = np.full((nActs, nActs), act_value)
         w = np.full((nWeights, nWeights), weight_value)
-        o = np.convolve(a,w[::-1],'valid')
+        o = convolve2d(a,w[::-1].T[::-1].T,mode='valid')
 
     print(f'PE cluster must be {nOuts} PEs wide and {nWeights} PEs high ')
 
