@@ -5,13 +5,14 @@
 module RAM #(
     parameter addrWidth = 16,
     parameter dataWidth = 32,
-    parameter depth = 1024 
+    parameter depth = 1024
 ) (
     input logic clk, nrst,
     input logic wr_en_i, // if 0, read
     input logic [addrWidth-1:0] addr_i,
     input logic [dataWidth-1:0] data_i,
-    output logic [dataWidth-1:0] data_o
+    output logic [dataWidth-1:0] data_o,
+    output logic valid_o
 );
 
 logic [dataWidth-1:0] mem [depth-1:0];
