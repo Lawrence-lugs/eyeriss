@@ -5,6 +5,7 @@ import os
 def generate_tb_cluster_stimulus(
     actBits = 3,
     weightBits = 3,
+    outBits = 3,
     nActs = 16,
     nWeights = 3,
     seed = 0,
@@ -35,6 +36,8 @@ def generate_tb_cluster_stimulus(
         a = np.full((nActs, nActs), act_value)
         w = np.full((nWeights, nWeights), weight_value)
         o = convolve2d(a,w[::-1].T[::-1].T,mode='valid')
+
+    
 
     print(f'PE cluster must be {nOuts} PEs wide and {nWeights} PEs high ')
 

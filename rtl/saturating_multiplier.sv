@@ -3,7 +3,8 @@
 // Symmetric Precision
 
 module saturating_multiplier #(
-    parameter bitWidth = 8
+    parameter bitWidth = 8,
+    parameter scalePrecision = 16
 ) (
     input signed [bitWidth-1:0] a,
     input signed [bitWidth-1:0] b,
