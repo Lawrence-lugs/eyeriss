@@ -42,7 +42,7 @@ def test_cluster_synthesizability():
 
     assert not sim.wait(), get_log_tail(log_file,30)
 
-@pytest.mark.parametrize('mode',['random','max','min'])
+# @pytest.mark.parametrize('mode',['random','max','min'])
 @pytest.mark.skipif("not config.getoption('postsynth')")
 def test_cluster_postsynth(mode, simulator='vcs',seed=0):
 

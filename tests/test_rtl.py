@@ -23,7 +23,7 @@ sim_args = {'vcs':  [
             ]
 }
 
-@pytest.mark.parametrize('mode',['random','max','min'])
+# @pytest.mark.parametrize('mode',['random','max','min'])
 def test_pe(mode, simulator='vcs',seed=0):
 
     rtl_file_list = [ 
@@ -75,7 +75,7 @@ def test_pe(mode, simulator='vcs',seed=0):
         out = [line for line in f.readlines()]
         assert 'TEST SUCCESS\n' in out, get_log_tail(log_file,10)
 
-@pytest.mark.parametrize('mode',['random','max','min'])
+# @pytest.mark.parametrize('mode',['random','max','min'])
 def test_pe_cluster(mode, simulator='vcs', seed=0):
 
     rtl_file_list = [ 

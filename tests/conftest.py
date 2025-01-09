@@ -21,6 +21,18 @@ def pytest_addoption(parser):
         default=False,
         help="performs post-synthesis simulation during tests",
     )
+    parser.addoption(
+        "--seed",
+        action="append",
+        default=[],
+        help="seed for random number generator",
+    )
+    parser.addoption(
+        "--mode",
+        action="append",
+        default=['random'],
+        help="values to test. options: max, min, random, all",
+    )
 
 def pytest_generate_tests(metafunc):
     if "simulator" in metafunc.fixturenames:
@@ -31,6 +43,12 @@ def pytest_generate_tests(metafunc):
                     f'Invalid simulator: {metafunc.config.getoption("simulator")}. Valid simulators: {valid_simulators}'
                 )
         metafunc.parametrize("simulator", metafunc.config.getoption("simulator"))
+
+    if 'mode' in metafunc.fixturenames:
+        if 'all' in metafunc.config.getoption("mode"):
+            metafunc.parametrize("mode", ['random','max','min'])
+        else:
+            metafunc.parametrize("mode", metafunc.config.getoption("mode"))
 
     if 'seed' in metafunc.fixturenames:
         metafunc.parametrize("seed", metafunc.config.getoption("seed")[0])
