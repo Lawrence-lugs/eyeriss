@@ -6,6 +6,14 @@ class quantized_tensor:
     Quantized Tensor
     Reals are normalized to [-1,1]
     If mode is 'symmetric', zero point is 0 and scale is 2 / (2**precision - 1)
+    
+    Main attributes:
+    real_values : np.ndarray -- Real values of the tensor
+    quantized_values : np.ndarray -- Quantized values of the tensor
+    scale : float -- Scale of the quantization
+    zero_point : float -- Zero point of the quantization
+    shape : tuple -- Shape of the tensor
+    fake_quantized_values : np.ndarray -- Quantized values translated back to real range
     '''
 
     def __init__(self,shape,precision,mode='symmetric',real_values=None,quantized_values=None,scale=None,zero_point=None):
