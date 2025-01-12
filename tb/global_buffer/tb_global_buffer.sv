@@ -13,6 +13,7 @@ module tb_global_buffer();
     parameter INTERFACE_DEPTH = 16;
     parameter DEPTH = 4096;
     parameter CLK_PERIOD = 10;
+    parameter OBUF_DEPTH = 256;
 
     // Signals
     logic clk;
@@ -21,10 +22,12 @@ module tb_global_buffer();
     typedef struct packed {
         global_buffer_instruction_t inst_i;
         logic ready_o;
+        logic [ADDR_WIDTH-1:0] obuf_rd_addr_o;
     } gbuf_signals_t;
     gbuf_signals_t gbuf;
+
     string path;
-    int w_file, o_file, a_file;
+    int w_file, o_file, a_file, obuf_file;
     global_buffer_instruction_t inst_i;
 
     global_buffer_data_itf #(
@@ -54,6 +57,7 @@ module tb_global_buffer();
         .ready_o        (gbuf.ready_o),
         .ext_data_itf_i (ext_data_itf_i.bufferSide),
         .obuf_data_itf_i(obuf_data_itf_i.bufferSide),
+        .obuf_rd_addr_o (gbuf.obuf_rd_addr_o),
         .ctrl_itf_i     (ctrl_itf_i.controllee)
     );
 
@@ -66,6 +70,9 @@ module tb_global_buffer();
     logic [DATA_WIDTH-1:0] data;
     logic [ADDR_WIDTH-1:0] addr;
 
+    logic [OBUF_DEPTH-1:0][DATA_WIDTH-1:0] obuf;
+    integer z;
+
     // Test stimulus
     initial begin
 
@@ -73,6 +80,16 @@ module tb_global_buffer();
         w_file = $fopen({path, "w.txt"}, "r");
         a_file = $fopen({path, "a.txt"}, "r");
         o_file = $fopen({path, "o.txt"}, "w");
+        obuf_file = $fopen({path, "obuf.txt"}, "r");
+
+        // Write obuf.txt into u_obuf.mem
+        $display("Writing obuf...");
+        z = 0;
+        while (!$feof(obuf_file)) begin
+            if ($fscanf(obuf_file, "%h", obuf[z]) == 1) begin
+                z++;
+            end
+        end        
 
         // Initialize interfaces
         // ext_data_itf_i.wr_data = 0;
@@ -154,8 +171,51 @@ module tb_global_buffer();
             $fwrite(o_file, "%h\n", ext_data_itf_i.rd_data);
             $display(":Read addr %h, : %h", addr, ext_data_itf_i.rd_data);
         end
+        
+        // Reset pointer
+        $display("Resetting pointer...");
+        gbuf.inst_i = I_POINTER_RESET;
+        // Wait for instruction accept
+        while (!gbuf.ready_o) #(CLK_PERIOD);
+        #(CLK_PERIOD);
 
         // Load from OBUF
+        // How does one know how many activations are there in the OBUF?
+        $display("Loading from OBUF...");
+        for (int i = 0; i < 120; i++) begin
+            $write("Writing data: %h: %h into addr %h...", gbuf.obuf_rd_addr_o ,obuf[gbuf.obuf_rd_addr_o], ctrl_itf_i.activation_start_addr + u_gb.activation_head);
+            obuf_data_itf_i.wr_data = obuf[gbuf.obuf_rd_addr_o];
+            obuf_data_itf_i.wr_en = 1;
+            gbuf.inst_i = I_LOAD_OUTPUT;
+            $display("GOOD");
+            // Wait for instruction accept
+            while (!gbuf.ready_o) #(CLK_PERIOD);
+            #(CLK_PERIOD);
+        end
+        
+        // Reset pointer
+        $display("Resetting pointer...");
+        gbuf.inst_i = I_POINTER_RESET;
+        // Wait for instruction accept
+        while (!gbuf.ready_o) #(CLK_PERIOD);
+        #(CLK_PERIOD);
+
+        // Read activations
+        $display("Reading activations...");
+        for (int i = 0; i < 120; i++) begin
+            ext_data_itf_i.wr_en = 0;
+            gbuf.inst_i = I_READ_ACTIVATION;
+            addr = ctrl_itf_i.activation_start_addr + u_gb.activation_head;
+            // Wait for instruction accept
+            $write("R");
+            while (!gbuf.ready_o) #(CLK_PERIOD);
+            #(CLK_PERIOD);
+            // Wait for data valid
+            $write("V");
+            while (!ext_data_itf_i.rd_data_valid) #(CLK_PERIOD);
+            $fwrite(o_file, "%h\n", ext_data_itf_i.rd_data);
+            $display(":Read addr %h, : %h", addr, ext_data_itf_i.rd_data);
+        end
 
         #(CLK_PERIOD * 5);
         $display("Simulation completed");

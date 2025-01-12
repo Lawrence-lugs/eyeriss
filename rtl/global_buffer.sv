@@ -34,6 +34,7 @@ module global_buffer #(
 
     input global_buffer_instruction_t inst_i,
     output logic ready_o,
+    output logic [addrWidth-1:0] obuf_rd_addr_o,
     
     // Data interfaces from outside and the accelerator
     global_buffer_data_itf.bufferSide ext_data_itf_i,
@@ -129,6 +130,7 @@ always_comb begin : instDecode
     ram_interface.wr_data = 0;
     ext_data_itf_i.rd_data = ram_interface.rd_data;
     ext_data_itf_i.rd_data_valid = ram_interface.valid;
+    obuf_rd_addr_o = activation_head;
     case (inst_i)
         I_LOAD_WEIGHT: begin
             ram_interface.wr_en = 1;
@@ -142,7 +144,7 @@ always_comb begin : instDecode
         end
         I_LOAD_OUTPUT: begin
             ram_interface.wr_en = 1;
-            ram_interface.addr = activation_head + ctrl_itf_i.activation_start_addr;    
+            ram_interface.addr = activation_head + ctrl_itf_i.activation_start_addr;
             ram_interface.wr_data = obuf_data_itf_i.wr_data; // Get data from OBUF
         end
         I_READ_ACTIVATION: begin

@@ -64,8 +64,8 @@ interface global_buffer_data_itf #(
     task reset ();
         wr_data = 0;
         wr_en = 0;
-        rd_data = 0;
-        rd_data_valid = 0;
+        // rd_data = 0;
+        // rd_data_valid = 0;
     endtask
 
     // Send function for testing.
