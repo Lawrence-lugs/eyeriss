@@ -6,7 +6,7 @@ module tb_output_scaler;
 
     // Parameters
     localparam numElements = 4;
-    localparam elementWidth = 20;
+    localparam elementWidth = 16;
     localparam outputWidth = 8;
     localparam fixedPointBits = 16;
     localparam shiftBits = 8;
@@ -18,8 +18,8 @@ module tb_output_scaler;
     logic nrst;
     
     // DUT signals
-    logic [numElements-1:0][elementWidth-1:0] wxI;
-    logic [numElements-1:0][outputWidth-1:0] yO;
+    logic signed [numElements-1:0][elementWidth-1:0] wxI;
+    logic signed [numElements-1:0][outputWidth-1:0] yO;
     cfg_oscaler_t cfg;
     
     // DUT instantiation
@@ -39,8 +39,8 @@ module tb_output_scaler;
     integer ins,m0,outs,shifts;
     integer mistakes;
 
-    logic [elementWidth-1:0] input_element;
-    logic [elementWidth-1:0] output_element;
+    logic signed [elementWidth-1:0] input_element;
+    logic signed [elementWidth-1:0] output_element;
 
     // Test stimulus
     initial begin
@@ -80,8 +80,8 @@ module tb_output_scaler;
             #(CLK_PERIOD*2);
             
             // Check results
-            $write("Checking yO vs expected: %d, %d",yO,output_element);
-            if(yO != output_element) begin
+            $write("Checking yO vs expected: %d, %d",$signed(yO[0]),output_element);
+            if($signed(yO[0]) != output_element) begin
                 $display("!!!!!!!!!");
                 mistakes++;
             end else begin
@@ -101,23 +101,6 @@ module tb_output_scaler;
         end
         $finish;
     end
-    
-    // Task to check and display results
-    task checkResults(string testName);
-        $display("Input values (wxI):");
-        for (int i = 0; i < numElements; i++) begin
-            $display("\tElement %0d: %0h", i, wxI[i]);
-        end
-        
-        $display("Output values (yO):");
-        for (int i = 0; i < numElements; i++) begin
-            $display("\tElement %0d: %0h", i, yO[i]);
-        end
-        
-        $display("Configuration:");
-        $display("\tOutput Scale: %0h", cfg.output_scale);
-        $display("\tOutput Shift: %0d", cfg.output_shift);
-    endtask
 
     // Clock generation
     initial begin

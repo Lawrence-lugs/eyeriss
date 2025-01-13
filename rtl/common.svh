@@ -9,12 +9,12 @@ package accelerator_package;
     
     // Row Stationary Accelerator Config
     typedef struct packed {
-        logic [3:0][SHAPE_BITS-1:0] weight_shape; // Layer weight shape: K C FY FX
-        logic [3:0][SHAPE_BITS-1:0] activation_shape; // Activation shape: B C OY OX
+        logic unsigned [3:0][SHAPE_BITS-1:0] weight_shape; // Layer weight shape: K C FY FX
+        logic unsigned [3:0][SHAPE_BITS-1:0] activation_shape; // Activation shape: B C OY OX
     
         // In using these, we must clip the fixed point multiplication output
-        logic [FIXED_POINT_BITS-1:0] output_scale; // M0
-        logic [SHIFT_BITS-1:0] output_shift; // 2^-n
+        logic unsigned [FIXED_POINT_BITS-1:0] output_scale; // M0
+        logic unsigned [SHIFT_BITS-1:0] output_shift; // 2^-n
     } cfg_rsacc_t;
 
     // Row Stationary Accelerator Flags
@@ -26,8 +26,8 @@ package accelerator_package;
 
     // Scaler Config
     typedef struct packed {
-        logic [FIXED_POINT_BITS-1:0] output_scale;
-        logic [SHIFT_BITS-1:0] output_shift;
+        logic unsigned [FIXED_POINT_BITS-1:0] output_scale;
+        logic unsigned [SHIFT_BITS-1:0] output_shift;
     } cfg_oscaler_t;
 
     typedef enum logic [3:0] {

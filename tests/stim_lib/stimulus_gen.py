@@ -7,8 +7,12 @@ def generate_scaler_stimulus(
     path,
     outBits = 8,
     inBits = 8,
-    fpBits = 16
+    fpBits = 16,
+    seed = 0
 ):
+
+    np.random.seed(seed)
+
     out_scale = np.random.uniform(0,5,10) / (2**outBits)
     m0, shift = np.vectorize(convert_scale_to_shift_and_m0)(out_scale)
     m0bin = np.vectorize(convert_to_fixed_point)(m0,fpBits)
@@ -16,17 +20,21 @@ def generate_scaler_stimulus(
     m0int = np.vectorize(int)(m0bin,base=2)
 
     test_int = np.random.randint(-2**(inBits-1),2**(inBits-1)-1,10) * np.random.randint(-2**(inBits-1),2**(inBits-1)-1,10)
-    # print('test_int\t',test_int)
     scaled = test_int*m0int
     scaled_clipped = scaled // (2**fpBits)
     scaled_clipped_shifted = np.vectorize(int)(scaled_clipped / 2**(-shift))
-    # print('test_int x m0\t',scaled, bin(scaled))
-    # print('shifted by m0 fp\t',scaled_clipped, bin(scaled_clipped))
-    # print('then shifted by shift\t',scaled_clipped_shifted, bin(scaled_clipped_shifted))
     out = np.vectorize(saturating_clip)(scaled_clipped_shifted,outBits=outBits)
-    # print('saturating_clip\t',out)
+    
+    vbin = np.vectorize(hex)
 
-    np.savetxt(path+'/shift.txt',shift,'%i')
+    print('m0, shift\t',m0int,shift)
+    print('test_int\t',test_int)
+    print('test_int x m0\t',scaled, vbin(scaled))
+    print('shifted by m0 fp\t',scaled_clipped, vbin(scaled_clipped))
+    print('then shifted by shift\t',scaled_clipped_shifted, vbin(scaled_clipped_shifted))
+    print('saturating_clip\t',out)
+    
+    np.savetxt(path+'/shift.txt',-shift,'%i')
     np.savetxt(path+'/m0.txt',m0int,'%i')
     np.savetxt(path+'/ins.txt',test_int,'%i')
     np.savetxt(path+'/outs.txt',out,'%i') 
