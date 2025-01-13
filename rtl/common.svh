@@ -10,12 +10,7 @@ package common;
         I_LOAD_OUTPUT,
         I_READ_ACTIVATION
     } global_buffer_instruction_t;
-
-    typedef struct packed {
-        logic [31:0] weight_start_addr;
-        logic [31:0] activation_start_addr;
-    } cfg_accelerator_t; // Overridden by interface version
-
+    
 endpackage // common 
 
 interface global_buffer_ctrl_itf #(

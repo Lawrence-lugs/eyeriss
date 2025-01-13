@@ -200,7 +200,7 @@ module tb_global_buffer();
         while (!gbuf.ready_o) #(CLK_PERIOD);
         #(CLK_PERIOD);
 
-        // Read activations
+        // Read activations, compare to OBUF.txt
         $display("Reading activations...");
         for (int i = 0; i < 120; i++) begin
             ext_data_itf_i.wr_en = 0;

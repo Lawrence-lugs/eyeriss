@@ -12,7 +12,7 @@ There are two versions of the cluster: one with a behavioral multicast network d
 
 ### How to run
 
-Run `pytest tests -s --simulator=vcs --seed=0`. 
+Run `pytest`. 
 This will run all the tests in the tests directory, and output the testbench outputs to tests/log.
 Changing the seed will change the values for all test arrays (but not the sizes thereof).
 
@@ -21,5 +21,6 @@ To test against sizes, manually modify test_all.py and change the appropriate va
 ### Todo
 
 * PE cluster control based on layer information metadata (currently the row-stationary control is inside a testbench)
-* Saturation logic + lower output precision
-* Actual buffer logic, single cycle input delay
+* Saturation logic
+* Accelerator
+* AXI Interface

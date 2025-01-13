@@ -43,7 +43,7 @@ def test_pe(mode, simulator='vcs',seed=0):
 
     # Pre-simulation
 
-    from stimulus_gen import generate_tb_pe_stimulus
+    from tests.stim_lib.stimulus_gen import generate_tb_pe_stimulus
 
     generate_tb_pe_stimulus(
         actBits = 8,
@@ -97,7 +97,7 @@ def test_pe_cluster(mode, simulator='vcs', seed=0):
 
     # Pre-simulation
 
-    from stimulus_gen import generate_tb_cluster_stimulus
+    from tests.stim_lib.stimulus_gen import generate_tb_cluster_stimulus
 
     generate_tb_cluster_stimulus(
         actBits = 3,
@@ -130,8 +130,6 @@ def test_pe_cluster(mode, simulator='vcs', seed=0):
         f.seek(0)
         out = [line for line in f.readlines()]
         assert 'TEST SUCCESS\n' in out, get_log_tail(log_file,10)
-
-
 
 def get_log_tail(log_file,lines):
     print(f'See {log_file} for details') 
