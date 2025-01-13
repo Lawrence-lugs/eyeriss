@@ -40,7 +40,6 @@ module global_buffer #(
     global_buffer_data_itf.bufferSide ext_data_itf_i,
     global_buffer_data_itf.bufferSide obuf_data_itf_i,
     global_buffer_ctrl_itf.controllee ctrl_itf_i
-
 );
 
 typedef struct packed {

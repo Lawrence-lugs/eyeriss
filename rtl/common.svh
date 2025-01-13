@@ -1,6 +1,34 @@
 `timescale 1ns/1ps
 
-package common;
+package accelerator_package;
+
+    // Parameter Declarations
+    parameter SHAPE_BITS = 16; 
+    parameter FIXED_POINT_BITS = 16;
+    parameter SHIFT_BITS = 8;
+    
+    // Row Stationary Accelerator Config
+    typedef struct packed {
+        logic [3:0][SHAPE_BITS-1:0] weight_shape; // Layer weight shape: K C FY FX
+        logic [3:0][SHAPE_BITS-1:0] activation_shape; // Activation shape: B C OY OX
+    
+        // In using these, we must clip the fixed point multiplication output
+        logic [FIXED_POINT_BITS-1:0] output_scale; // M0
+        logic [SHIFT_BITS-1:0] output_shift; // 2^-n
+    } cfg_rsacc_t;
+
+    // Row Stationary Accelerator Flags
+    typedef struct packed {
+        logic finished,
+        logic ready,
+        logic running
+    } flg_rsacc_t;
+
+    // Scaler Config
+    typedef struct packed {
+        logic [FIXED_POINT_BITS-1:0] output_scale;
+        logic [SHIFT_BITS-1:0] output_shift;
+    } cfg_oscaler_t;
 
     typedef enum logic [3:0] {
         I_NOP,
@@ -10,8 +38,21 @@ package common;
         I_LOAD_OUTPUT,
         I_READ_ACTIVATION
     } global_buffer_instruction_t;
-    
-endpackage // common 
+
+endpackage // accelerator_package 
+
+// Config for overall accelerator
+interface cfg_rsacc_itf #(
+    parameter numWidth = 16;
+)
+
+
+    modport controllee(
+        input weight_shape,
+        input activation_shape
+    )
+
+endinterface
 
 interface global_buffer_ctrl_itf #(
     parameter addrWidth = 32

@@ -24,3 +24,8 @@ To test against sizes, manually modify test_all.py and change the appropriate va
 * Saturation logic
 * Accelerator
 * AXI Interface
+
+### Notes
+
+* Doesn't cut layers to fit (rely on DNN compiler)
+* May need a SIMD module to add residual layers

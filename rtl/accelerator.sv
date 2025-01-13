@@ -5,15 +5,18 @@ module accelerator #(
 ) (
     input logic clk, nrst,
 
-        
+    input cfg_rsacc_t cfg;
+    output flg_rsacc_t flag;
+    
+    
 );
     
-// Global Buffer Interface
+// Global Buffer Instance
 global_buffer #(
     .dataSize(dataSize),
     .depth(globalBufferSize),
     .interfaceDepth(globalBufferInterfaceSize)
-) gb (
+) u_gb (
     .clk(clk),
     .nrst(nrst),
     .addr_i(gb_addr_i),
@@ -22,5 +25,7 @@ global_buffer #(
     .rd_data_o(gb_rd_data_o),
     .valid_o(gb_valid_o)
 );
+
+
 
 endmodule
