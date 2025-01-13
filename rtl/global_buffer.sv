@@ -19,7 +19,7 @@ TODO: ITF read_data and read_data_valid must be combinationally connected to ext
 
 */
 
-import common::*;
+import accelerator_package::*;
 
 module global_buffer #(
     parameter dataSize = 8,

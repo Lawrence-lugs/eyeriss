@@ -5,7 +5,7 @@ package accelerator_package;
     // Parameter Declarations
     parameter SHAPE_BITS = 16; 
     parameter FIXED_POINT_BITS = 16;
-    parameter SHIFT_BITS = 8;
+    parameter SHIFT_BITS = 4; // Only as much as output bits
     
     // Row Stationary Accelerator Config
     typedef struct packed {
@@ -19,9 +19,9 @@ package accelerator_package;
 
     // Row Stationary Accelerator Flags
     typedef struct packed {
-        logic finished,
-        logic ready,
-        logic running
+        logic finished;
+        logic ready;
+        logic running;
     } flg_rsacc_t;
 
     // Scaler Config
@@ -40,19 +40,6 @@ package accelerator_package;
     } global_buffer_instruction_t;
 
 endpackage // accelerator_package 
-
-// Config for overall accelerator
-interface cfg_rsacc_itf #(
-    parameter numWidth = 16;
-)
-
-
-    modport controllee(
-        input weight_shape,
-        input activation_shape
-    )
-
-endinterface
 
 interface global_buffer_ctrl_itf #(
     parameter addrWidth = 32

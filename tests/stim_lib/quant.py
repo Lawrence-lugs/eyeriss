@@ -99,7 +99,7 @@ def scaling_quantized_convolution(a,w,outBits,internalPrecision) -> quantized_te
     
 def convert_scale_to_shift_and_m0(scale,precision=16):
     " Convert scale to shift and zero point "
-    shift = np.ceil(np.log2(scale))
+    shift = int(np.ceil(np.log2(scale)))
     m0 = scale / 2**shift
     fp_string = convert_to_fixed_point(m0,precision)
     m0_clipped = fixed_point_to_float(fp_string,precision)
@@ -121,3 +121,17 @@ def fixed_point_to_float(number,precision):
     for i in range(precision):
         out += int(number[i]) * 2**-(i+1)
     return out
+
+def saturating_clip (
+    num_i, outBits = 8
+):
+
+    min = -(2**(outBits-1))
+    max = 2**(outBits-1)-1
+    
+    if(num_i < min):
+        return min
+    if(num_i > max):
+        return max
+    
+    return num_i

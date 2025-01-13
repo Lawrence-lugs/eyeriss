@@ -1,6 +1,37 @@
 import numpy as np
 from scipy.signal import convolve2d
 import os
+from tests.stim_lib.quant import *
+
+def generate_scaler_stimulus(
+    path,
+    outBits = 8,
+    inBits = 8,
+    fpBits = 16
+):
+    out_scale = np.random.uniform(0,5,10) / (2**outBits)
+    m0, shift = np.vectorize(convert_scale_to_shift_and_m0)(out_scale)
+    m0bin = np.vectorize(convert_to_fixed_point)(m0,fpBits)
+
+    m0int = np.vectorize(int)(m0bin,base=2)
+
+    test_int = np.random.randint(-2**(inBits-1),2**(inBits-1)-1,10) * np.random.randint(-2**(inBits-1),2**(inBits-1)-1,10)
+    # print('test_int\t',test_int)
+    scaled = test_int*m0int
+    scaled_clipped = scaled // (2**fpBits)
+    scaled_clipped_shifted = np.vectorize(int)(scaled_clipped / 2**(-shift))
+    # print('test_int x m0\t',scaled, bin(scaled))
+    # print('shifted by m0 fp\t',scaled_clipped, bin(scaled_clipped))
+    # print('then shifted by shift\t',scaled_clipped_shifted, bin(scaled_clipped_shifted))
+    out = np.vectorize(saturating_clip)(scaled_clipped_shifted,outBits=outBits)
+    # print('saturating_clip\t',out)
+
+    np.savetxt(path+'/shift.txt',shift,'%i')
+    np.savetxt(path+'/m0.txt',m0int,'%i')
+    np.savetxt(path+'/ins.txt',test_int,'%i')
+    np.savetxt(path+'/outs.txt',out,'%i') 
+
+    return out
 
 def generate_tb_cluster_stimulus(
     actBits = 3,

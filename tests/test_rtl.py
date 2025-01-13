@@ -12,6 +12,7 @@ simulator = 'vcs' # vcs or xrun
 sim_args = {'vcs':  [
                 '-full64',
                 '-debug_pp',
+                '-debug_access',
                 '-sverilog',
                 '+neg_tchk',
                 '-l', 'vcs.log',
@@ -22,6 +23,59 @@ sim_args = {'vcs':  [
                 '+access+r'
             ]
 }
+
+def test_scaler(simulator='vcs',seed=0):
+
+    package_list = [
+        '../rtl/common.svh',
+    ]
+
+    rtl_file_list = [ 
+        '../rtl/output_scaler.sv',
+    ]
+    tb_name = 'tb_output_scaler'
+    tb_path = 'output_scaler'
+    stimulus_output_path = 'tb/output_scaler/inputs'
+
+    tb_file = f'../tb/{tb_path}/{tb_name}.sv'
+    log_file = f'tests/logs/{tb_name}_{simulator}.log'
+    
+    logdir = os.path.dirname(log_file)
+    os.makedirs(logdir,exist_ok=True)
+
+    # Pre-simulation
+    from tests.stim_lib.stimulus_gen import generate_scaler_stimulus
+
+    generate_scaler_stimulus(
+        path=stimulus_output_path,
+        outBits = 8,
+        inBits = 8,
+        fpBits = 16
+    )
+
+    # Simulation
+
+    with open(log_file,'w+') as f:
+
+        sim = subprocess.Popen([
+            simulator,
+            *package_list,
+            tb_file
+        ] + sim_args[simulator] + rtl_file_list, 
+        shell=False,
+        cwd='./sims',
+        stdout=f
+        )
+
+    assert not sim.wait(), get_log_tail(log_file,10)
+
+    # Post-simulation
+
+    with open(log_file,'r+') as f:
+        f.seek(0)
+        out = [line for line in f.readlines()]
+        assert 'TEST SUCCESS\n' in out, get_log_tail(log_file,10)
+    
 
 # @pytest.mark.parametrize('mode',['random','max','min'])
 def test_pe(mode, simulator='vcs',seed=0):
